@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta id="vp" name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tally – Nutrition & Workouts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script>
+  tailwind.config = { theme: { extend: {
+    fontFamily: { display: ['"Instrument Serif"', 'Georgia', 'serif'], sans: ['"Hanken Grotesk"', 'system-ui', 'sans-serif'] },
+    colors: { ink: '#0F1419', cobalt: '#2F4BFF', fog: '#E9ECF0' }
+  } } };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.5/babel.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; max-width: 100%; overflow-x: clip; -webkit-text-size-adjust: 100%; }
+  @supports not (overflow-x: clip) { html, body { overflow-x: hidden; } }
+  body { font-family: 'Hanken Grotesk', system-ui, sans-serif; background: #E9ECF0; color: #0F1419; overflow-wrap: anywhere; }
+  #root { height: 100vh; height: 100dvh; max-width: 100%; }
+  img, svg, video, canvas { max-width: 100%; }
+  .scroll { overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+  .strike { background: linear-gradient(currentColor, currentColor) no-repeat 0 58% / 0% 1.5px; transition: background-size .5s ease, color .5s; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+  .strike.done { background-size: 100% 1.5px; }
+  .card { background: #fff; border-radius: 28px; box-shadow: 0 1px 0 rgba(15,20,25,.04), 0 18px 48px -24px rgba(15,20,25,.18); }
+  .field { background: #F3F5F8; border-radius: 14px; padding: 12px 14px; width: 100%; min-width: 0; max-width: 100%; font: inherit; font-size: 16px; outline: none; border: 1.5px solid transparent; transition: border-color .2s, background .2s; }
+  .field:focus { background: #fff; border-color: #2F4BFF; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
+  @keyframes rise { from { opacity: 0; transform: translateY(-12px) scale(.98) } to { opacity: 1; transform: none } }
+  @keyframes pop { 0% { transform: scale(.7) } 60% { transform: scale(1.15) } 100% { transform: scale(1) } }
+  .fade { animation: fade .35s cubic-bezier(.22,1,.36,1) both }
+  .rise { animation: rise .55s cubic-bezier(.22,1,.36,1) both }
+  .pop { animation: pop .35s ease-out }
+  .check path { stroke-dasharray: 24; stroke-dashoffset: 24; transition: stroke-dashoffset .35s ease .05s }
+  .on .check path { stroke-dashoffset: 0 }
+  :focus-visible { outline: 2px solid #2F4BFF; outline-offset: 2px }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef } = React;
+
+/* ---------- helpers ---------- */
+const dayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+function useStore(key, init) {
+  const [v, setV] = useState(() => { try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : init; } catch { return init; } });
+  useEffect(() => { try { localStorage.setItem(key, JSON.stringify(v)); } catch {} }, [key, v]);
+  return [v, setV];
+}
+
+function useMedia(q) {
+  const [m, setM] = useState(() => matchMedia(q).matches);
+  useEffect(() => { const l = matchMedia(q), f = () => setM(l.matches); f(); l.addEventListener('change', f); return () => l.removeEventListener('change', f); }, [q]);
+  return m;
+}
+
+function useCount(target, ms = 1000) {
+  const [v, setV] = useState(0); const from = useRef(0);
+  useEffect(() => {
+    const s = from.current, t0 = performance.now(); let r;
+    const step = t => { const p = Math.min(1, (t - t0) / ms), n = Math.round(s + (target - s) * (1 - Math.pow(1 - p, 3))); from.current = n; setV(n); if (p < 1) r = requestAnimationFrame(step); };
+    r = requestAnimationFrame(step); return () => cancelAnimationFrame(r);
+  }, [target]);
+  return v;
+}
+
+const shrink = (src, max = 1024, q = .8) => {
+  const w = src.videoWidth || src.width, h = src.videoHeight || src.height, k = Math.min(1, max / Math.max(w, h));
+  const c = document.createElement('canvas'); c.width = Math.round(w * k); c.height = Math.round(h * k);
+  c.getContext('2d').drawImage(src, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', q);
+};
+const readImg = f => new Promise((ok, no) => { const r = new FileReader(); r.onerror = no; r.onload = () => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = r.result; }; r.readAsDataURL(f); });
+const thumbOf = d => new Promise(ok => { const i = new Image(); i.onload = () => ok(shrink(i, 200, .7)); i.src = d; });
+
+async function analyze({ key, model, text, image }) {
+  const prompt = `You are a nutrition expert. Estimate the meal${image ? ' in the photo' : ''}${text ? ` described as: "${text}"` : ''}. Reply only with JSON: {"name": short meal name, "calories": number, "protein": grams, "carbs": grams, "fat": grams}. Use whole numbers for the entire portion shown.`;
+  const parts = [{ text: prompt }];
+  if (image) parts.push({ inline_data: { mime_type: 'image/jpeg', data: image.split(',')[1] } });
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+    body: JSON.stringify({ contents: [{ parts }], generationConfig: { responseMimeType: 'application/json', temperature: 0.2 } })
+  });
+  const j = await res.json();
+  if (!res.ok) throw new Error(j.error?.message || 'Gemini request failed.');
+  const out = (j.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
+  try { return JSON.parse(out.replace(/```json|```/g, '').trim()); } catch { throw new Error('Gemini returned an unreadable answer. Try again.'); }
+}
+
+const ICONS = {
+  nutrition: 'M12 21c-4 0-7-3-7-7 0-3 2-5 4-5 1.2 0 2 .5 3 .5s1.8-.5 3-.5c2 0 4 2 4 5 0 4-3 7-7 7zM12 9c0-2 1-4 3-5',
+  workouts: 'M6 8v8M3 10v4M18 8v8M21 10v4M6 12h12',
+  settings: 'M4 7h10M18 7h2M4 17h2M10 17h10M14 5v4M6 15v4',
+  camera: 'M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 100-7 3.5 3.5 0 000 7z',
+  image: 'M4 5h16v14H4zM4 16l5-5 4 4 3-3 4 4',
+  trash: 'M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13',
+  x: 'M6 6l12 12M18 6L6 18'
+};
+const Icon = ({ n, s = 20 }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={ICONS[n]} /></svg>;
+
+/* ---------- nutrition ---------- */
+function Ring({ value, goal }) {
+  const R = 118, C = 2 * Math.PI * R, [m, setM] = useState(false), shown = useCount(value);
+  useEffect(() => { const t = setTimeout(() => setM(true), 120); return () => clearTimeout(t); }, []);
+  const pct = m ? Math.min(1, value / goal) : 0, over = value > goal;
+  return (
+    <div className="relative w-full max-w-[280px] aspect-square shrink-0" style={{ containerType: 'inline-size' }}>
+      <svg viewBox="0 0 280 280" className="-rotate-90 w-full h-full">
+        <circle cx="140" cy="140" r={R} fill="none" stroke="#E4E8EE" strokeWidth="10" />
+        <circle cx="140" cy="140" r={R} fill="none" stroke={over ? '#E5484D' : '#2F4BFF'} strokeWidth="10" strokeLinecap="round"
+          strokeDasharray={C} strokeDashoffset={C * (1 - pct)} style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(.22,1,.36,1), stroke .4s' }} />
+      </svg>
+      <div className="absolute inset-0 grid place-content-center text-center">
+        <div className="font-display leading-none tabular-nums" style={{ fontSize: '30cqw' }}>{shown}</div>
+        <div className="mt-2 text-sm text-ink/50">of {goal} kcal</div>
+      </div>
+    </div>
+  );
+}
+
+function Camera({ onSnap, onClose }) {
+  const v = useRef(); const [err, setErr] = useState('');
+  useEffect(() => {
+    let s;
+    navigator.mediaDevices?.getUserMedia({ video: true }).then(m => { s = m; v.current.srcObject = m; }).catch(() => setErr('Camera unavailable. Upload a photo instead.'));
+    return () => s && s.getTracks().forEach(t => t.stop());
+  }, []);
+  return (
+    <div className="rise rounded-2xl overflow-hidden bg-ink relative">
+      {err ? <div className="p-8 text-white/70 text-sm text-center">{err}</div> : <video ref={v} autoPlay playsInline muted className="w-full aspect-video object-cover" />}
+      <div className="absolute bottom-3 inset-x-3 flex justify-between">
+        <button type="button" onClick={onClose} className="px-4 py-2 rounded-full bg-white/15 text-white text-sm backdrop-blur">Cancel</button>
+        {!err && <button type="button" onClick={() => onSnap(shrink(v.current))} className="px-4 py-2 rounded-full bg-white text-ink text-sm font-medium">Capture</button>}
+      </div>
+    </div>
+  );
+}
+
+function LogMeal({ settings, onAdd, goSettings, compact, sticky }) {
+  const [text, setText] = useState(''), [cal, setCal] = useState(''), [img, setImg] = useState(null);
+  const [cam, setCam] = useState(false), [busy, setBusy] = useState(false), [err, setErr] = useState('');
+  const pick = async f => { if (f && f.type.startsWith('image/')) { setImg(shrink(await readImg(f))); setErr(''); } };
+  async function submit(e) {
+    e.preventDefault(); setErr('');
+    if (!text.trim() && !img) return setErr('Describe your meal or add a photo.');
+    let m = { name: text.trim() || 'Meal', cal: parseInt(cal) || 0, p: 0, c: 0, f: 0, ai: false };
+    if (!m.cal) {
+      if (!settings.key) return setErr('Enter the calories, or add a Gemini API key to estimate them.');
+      setBusy(true);
+      try {
+        const r = await analyze({ key: settings.key, model: settings.model, text: text.trim(), image: img });
+        m = { name: text.trim() || r.name || 'Meal', cal: Math.round(r.calories) || 0, p: Math.round(r.protein) || 0, c: Math.round(r.carbs) || 0, f: Math.round(r.fat) || 0, ai: true };
+      } catch (x) { setBusy(false); return setErr(x.message); }
+      setBusy(false);
+    }
+    onAdd({ ...m, thumb: img ? await thumbOf(img) : null });
+    setText(''); setCal(''); setImg(null);
+  }
+  const auto = !!settings.key && !cal;
+  return (
+    <form onSubmit={submit} className={`card min-w-0 ${compact ? 'p-5' : 'p-7'} ${sticky ? 'sticky top-2' : ''}`} onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); pick(e.dataTransfer.files[0]); }}>
+      <h2 className="font-display text-3xl mb-5">Log a meal</h2>
+      <textarea rows="3" value={text} onChange={e => setText(e.target.value)} className="field resize-none" placeholder="Two eggs, avocado toast and a flat white" />
+      <div className="mt-3">
+        {cam ? <Camera onClose={() => setCam(false)} onSnap={d => { setImg(d); setCam(false); }} /> :
+          img ? (
+            <div className="rise relative rounded-2xl overflow-hidden">
+              <img src={img} alt="Meal preview" className="w-full h-44 object-cover" />
+              <button type="button" aria-label="Remove photo" onClick={() => setImg(null)} className="absolute top-2 right-2 w-8 h-8 rounded-full bg-ink/70 text-white grid place-items-center"><Icon n="x" s={16} /></button>
+            </div>
+          ) : (
+            <div className="flex gap-2 [&>*]:min-w-0 [&>*]:px-2">
+              <label className="flex-1 cursor-pointer rounded-2xl border border-dashed border-ink/20 py-4 flex items-center justify-center gap-2 text-sm text-ink/60 hover:border-cobalt hover:text-cobalt transition-colors">
+                <Icon n="image" s={18} /> Upload photo
+                <input type="file" accept="image/*" className="sr-only" onChange={e => pick(e.target.files[0])} />
+              </label>
+              <button type="button" onClick={() => setCam(true)} className="flex-1 rounded-2xl border border-dashed border-ink/20 py-4 flex items-center justify-center gap-2 text-sm text-ink/60 hover:border-cobalt hover:text-cobalt transition-colors"><Icon n="camera" s={18} /> Use camera</button>
+            </div>
+          )}
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <input type="number" min="0" value={cal} onChange={e => setCal(e.target.value)} className="field !w-40" placeholder="kcal (optional)" />
+        <span className="text-sm text-ink/45 leading-snug flex-1 min-w-[9rem]">{settings.key ? 'Leave empty and Gemini will estimate.' : 'Calories needed without Gemini.'}</span>
+      </div>
+      {err && <p className="rise mt-3 text-sm text-red-600">{err}</p>}
+      {!settings.key && <button type="button" onClick={goSettings} className="mt-3 text-sm text-cobalt underline underline-offset-4">Add a Gemini API key</button>}
+      <button disabled={busy} className="mt-5 w-full h-12 rounded-full bg-ink text-white font-medium transition-all hover:bg-cobalt active:scale-[.98] disabled:opacity-60 flex items-center justify-center gap-2">
+        {busy && <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
+        {busy ? 'Analyzing…' : auto ? 'Analyze and log' : 'Log meal'}
+      </button>
+    </form>
+  );
+}
+
+const REVEAL = 'opacity-0 group-hover:opacity-100 focus:opacity-100 [@media(hover:none)]:opacity-70 transition';
+
+function Nutrition({ meals, setMeals, settings, goSettings, compact, two }) {
+  const today = meals.filter(m => m.date === dayKey());
+  const sum = k => today.reduce((a, m) => a + (m[k] || 0), 0), total = sum('cal'), left = settings.goal - total;
+  const add = m => setMeals(a => [{ id: uid(), date: dayKey(), created: Date.now(), time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), ...m }, ...a]);
+  const summary = (
+    <section className={`card flex flex-wrap items-center justify-center gap-x-10 gap-y-6 ${compact ? 'p-5' : 'p-8'}`}>
+      <Ring value={total} goal={settings.goal} />
+      <div className={`flex-1 min-w-[200px] ${compact ? 'text-center' : ''}`}>
+        <div className="font-display text-5xl tabular-nums">{Math.abs(left)}</div>
+        <div className="text-ink/50 mb-6">{left >= 0 ? 'kcal remaining' : 'kcal over your goal'}</div>
+        <div className="grid grid-cols-3 gap-3">
+          {[['Protein', 'p'], ['Carbs', 'c'], ['Fat', 'f']].map(([l, k]) => (
+            <div key={k} className="min-w-0"><div className="text-xl font-semibold tabular-nums">{sum(k)}<span className="text-sm text-ink/40 font-normal"> g</span></div><div className="text-sm text-ink/50">{l}</div></div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+  const list = (
+    <section className="min-w-0">
+      <h2 className="font-display text-3xl mb-4">Today’s meals</h2>
+      {today.length === 0 ? <p className="card p-6 text-ink/50">Nothing logged yet. Describe a meal or add a photo to start your day.</p> : (
+        <ul className="space-y-3">
+          {today.map(m => (
+            <li key={m.id} className={`card !rounded-[22px] p-3 pr-4 flex items-center gap-3 group min-w-0 ${Date.now() - m.created < 1500 ? 'rise' : ''}`}>
+              {m.thumb ? <img src={m.thumb} alt="" className="w-12 h-12 shrink-0 rounded-2xl object-cover" /> : <div className="w-12 h-12 shrink-0 rounded-2xl bg-fog grid place-items-center font-display text-2xl text-ink/50">{m.name[0]?.toUpperCase()}</div>}
+              <div className="flex-1 min-w-0">
+                <div className="font-medium truncate">{m.name}</div>
+                <div className="text-sm text-ink/45 truncate">{m.time}{m.ai && m.p + m.c + m.f > 0 ? ` · P ${m.p}  C ${m.c}  F ${m.f}` : ''}{m.ai ? ' · estimated' : ''}</div>
+              </div>
+              <div className="font-display text-3xl tabular-nums shrink-0">{m.cal}</div>
+              <button aria-label={`Delete ${m.name}`} onClick={() => setMeals(a => a.filter(x => x.id !== m.id))} className={`shrink-0 text-ink/40 hover:text-red-600 ${REVEAL}`}><Icon n="trash" s={18} /></button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+  const log = <LogMeal settings={settings} onAdd={add} goSettings={goSettings} compact={compact} sticky={two} />;
+  return two
+    ? <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,.9fr)] gap-8 items-start"><div className="space-y-8 min-w-0">{summary}{list}</div>{log}</div>
+    : <div className="space-y-6 min-w-0">{summary}{log}{list}</div>;
+}
+
+/* ---------- workouts ---------- */
+const DEFAULT_WORKOUT = [['Barbell squat', '4 × 6'], ['Bench press', '4 × 8'], ['Bent-over row', '3 × 10'], ['Overhead press', '3 × 8'], ['Plank', '3 × 45 s']].map(([name, detail]) => ({ id: uid(), name, detail, doneOn: null }));
+
+function Workouts({ items, setItems, compact }) {
+  const t = dayKey(), done = items.filter(i => i.doneOn === t).length, pct = items.length ? done / items.length : 0;
+  const [name, setName] = useState(''), [detail, setDetail] = useState('');
+  const toggle = id => setItems(a => a.map(i => i.id === id ? { ...i, doneOn: i.doneOn === t ? null : t } : i));
+  const add = e => { e.preventDefault(); if (!name.trim()) return; setItems(a => [...a, { id: uid(), name: name.trim(), detail: detail.trim(), doneOn: null }]); setName(''); setDetail(''); };
+  return (
+    <div className="max-w-2xl w-full min-w-0">
+      <section className={`card mb-6 ${compact ? 'p-5' : 'p-8'}`}>
+        <div className="flex flex-wrap items-end justify-between gap-x-4">
+          <div className={`font-display tabular-nums ${compact ? 'text-5xl' : 'text-6xl'}`}>{done}<span className="text-ink/30"> / {items.length}</span></div>
+          <div className="text-ink/50 pb-1">{items.length && done === items.length ? <span className="rise inline-block text-cobalt font-medium">Session complete</span> : 'exercises done today'}</div>
+        </div>
+        <div className="mt-5 h-2 rounded-full bg-fog overflow-hidden"><div className="h-full rounded-full bg-cobalt" style={{ width: `${pct * 100}%`, transition: 'width .7s cubic-bezier(.22,1,.36,1)' }} /></div>
+      </section>
+      {items.length === 0 && <p className="card p-6 text-ink/50 mb-6">No exercises yet. Add your first one below.</p>}
+      <ul className="space-y-3">
+        {items.map(i => {
+          const d = i.doneOn === t;
+          return (
+            <li key={i.id} className="card !rounded-[22px] px-4 py-3.5 flex items-center gap-3 group min-w-0">
+              <button onClick={() => toggle(i.id)} aria-pressed={d} aria-label={`Mark ${i.name} ${d ? 'not done' : 'done'}`}
+                className={`${d ? 'on bg-cobalt border-cobalt' : 'border-ink/20 hover:border-cobalt'} w-8 h-8 shrink-0 rounded-full border-2 grid place-items-center transition-colors duration-300`}>
+                <svg className={`check w-4 h-4 text-white ${d ? 'pop' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+              </button>
+              <div className="flex-1 min-w-0">
+                <span className={`strike text-lg font-medium ${d ? 'done text-ink/35' : ''}`}>{i.name}</span>
+                {compact && i.detail && <div className="text-sm text-ink/45">{i.detail}</div>}
+              </div>
+              {!compact && <span className="text-ink/45 tabular-nums shrink-0">{i.detail}</span>}
+              <button aria-label={`Remove ${i.name}`} onClick={() => setItems(a => a.filter(x => x.id !== i.id))} className={`shrink-0 text-ink/40 hover:text-red-600 ${REVEAL}`}><Icon n="trash" s={18} /></button>
+            </li>
+          );
+        })}
+      </ul>
+      <form onSubmit={add} className="mt-6 flex flex-wrap gap-3">
+        <input value={name} onChange={e => setName(e.target.value)} className={`field !bg-white ${compact ? 'basis-full' : 'flex-1'}`} placeholder="Add an exercise" />
+        <input value={detail} onChange={e => setDetail(e.target.value)} className={`field !bg-white ${compact ? 'flex-1' : '!w-40'}`} placeholder="3 × 10" />
+        <button className="px-6 h-12 shrink-0 rounded-full bg-ink text-white font-medium hover:bg-cobalt active:scale-[.97] transition">Add</button>
+      </form>
+    </div>
+  );
+}
+
+/* ---------- settings ---------- */
+function Settings({ settings, setSettings, compact }) {
+  const set = k => e => setSettings(s => ({ ...s, [k]: k === 'goal' ? Math.max(0, parseInt(e.target.value) || 0) : e.target.value }));
+  return (
+    <div className={`card w-full max-w-xl space-y-6 ${compact ? 'p-5' : 'p-8'}`}>
+      <div>
+        <label className="font-medium" htmlFor="k">Gemini API key</label>
+        <input id="k" type="password" autoComplete="off" value={settings.key} onChange={set('key')} className="field mt-2" placeholder="Paste your key from Google AI Studio" />
+        <p className="text-sm text-ink/50 mt-2">Create a free key at <a className="text-cobalt underline underline-offset-4" href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">aistudio.google.com/apikey</a>. It stays in this browser, and photos go straight to Google.</p>
+      </div>
+      <div>
+        <label className="font-medium" htmlFor="m">Model</label>
+        <input id="m" value={settings.model} onChange={set('model')} className="field mt-2" />
+      </div>
+      <div>
+        <label className="font-medium" htmlFor="g">Daily calorie goal</label>
+        <input id="g" type="number" min="0" value={settings.goal} onChange={set('goal')} className="field mt-2 !w-40" />
+      </div>
+    </div>
+  );
+}
+
+/* ---------- app ---------- */
+const MODES = [['auto', 'Auto'], ['mobile', 'Mobile view'], ['pc', 'PC view']];
+
+function ViewSwitch({ mode, setMode }) {
+  const i = Math.max(0, MODES.findIndex(m => m[0] === mode));
+  return (
+    <div role="radiogroup" aria-label="Device view" className="relative grid grid-cols-[repeat(3,minmax(0,1fr))] p-1 rounded-full bg-white w-full max-w-[330px] shadow-[0_1px_0_rgba(15,20,25,.04),0_10px_30px_-18px_rgba(15,20,25,.25)]">
+      <div className="absolute top-1 bottom-1 left-1 rounded-full bg-ink" style={{ width: 'calc((100% - 8px) / 3)', transform: `translateX(${i * 100}%)`, transition: 'transform .45s cubic-bezier(.22,1,.36,1)' }} />
+      {MODES.map(([k, l]) => (
+        <button key={k} role="radio" aria-checked={mode === k} onClick={() => setMode(k)}
+          className={`relative z-10 h-8 px-1 truncate text-[13px] font-medium transition-colors duration-300 ${mode === k ? 'text-white' : 'text-ink/60 hover:text-ink'}`}>{l}</button>
+      ))}
+    </div>
+  );
+}
+
+function App() {
+  const [tab, setTab] = useState('nutrition');
+  const [rawMode, setMode] = useStore('tally.view', 'auto');
+  const [settings, setSettings] = useStore('tally.settings', { key: '', model: 'gemini-2.5-flash', goal: 2200 });
+  const [meals, setMeals] = useStore('tally.meals', []);
+  const [workout, setWorkout] = useStore('tally.workout', DEFAULT_WORKOUT);
+  const mode = MODES.some(m => m[0] === rawMode) ? rawMode : 'auto';
+  const narrow = useMedia('(max-width: 820px)'), wide = useMedia('(min-width: 1100px)');
+  const compact = mode === 'mobile' || (mode === 'auto' && narrow);
+  const scroller = useRef();
+  const tabs = [['nutrition', 'Nutrition'], ['workouts', 'Workouts'], ['settings', 'Settings']];
+  const idx = tabs.findIndex(x => x[0] === tab);
+
+  // PC view on a phone: ask the browser for a wide layout viewport instead of letting it scroll sideways.
+  useEffect(() => {
+    const m = document.getElementById('vp');
+    if (m) m.content = mode === 'pc' ? 'width=1200, viewport-fit=cover' : 'width=device-width, initial-scale=1, viewport-fit=cover';
+  }, [mode]);
+  useEffect(() => { scroller.current && scroller.current.scrollTo(0, 0); }, [tab, compact]);
+
+  const header = (
+    <header className={compact ? 'mb-5' : 'mb-8'}>
+      <h1 className={`font-display leading-none ${compact ? 'text-5xl' : 'text-6xl'}`}>{tabs[idx][1]}</h1>
+      <p className="text-ink/50 mt-2">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+    </header>
+  );
+  const view = (
+    <div key={tab} className="fade min-w-0">
+      {tab === 'nutrition' && <Nutrition meals={meals} setMeals={setMeals} settings={settings} goSettings={() => setTab('settings')} compact={compact} two={!compact && wide} />}
+      {tab === 'workouts' && <Workouts items={workout} setItems={setWorkout} compact={compact} />}
+      {tab === 'settings' && <Settings settings={settings} setSettings={setSettings} compact={compact} />}
+    </div>
+  );
+
+  return (
+    <div className="h-full flex flex-col overflow-hidden">
+      <div className={`shrink-0 h-14 flex items-center px-4 ${compact ? 'justify-center' : 'justify-end pr-10'}`}>
+        <ViewSwitch mode={mode} setMode={setMode} />
+      </div>
+      {compact ? (
+        <div className="flex-1 min-h-0 flex justify-center min-[520px]:px-4 min-[520px]:pb-4">
+          <div className="relative w-full max-w-[430px] h-full flex flex-col bg-fog overflow-hidden min-[520px]:rounded-[40px] min-[520px]:border-[8px] min-[520px]:border-ink min-[520px]:shadow-[0_40px_80px_-30px_rgba(15,20,25,.45)]">
+            <main ref={scroller} className="scroll flex-1 min-h-0 px-4 pt-5 pb-6">{header}{view}</main>
+            <nav className="relative shrink-0 grid grid-cols-3 bg-white border-t border-ink/5 pb-[env(safe-area-inset-bottom)]">
+              <div className="absolute top-0 left-0 w-1/3 flex justify-center" style={{ transform: `translateX(${idx * 100}%)`, transition: 'transform .45s cubic-bezier(.22,1,.36,1)' }}><div className="w-9 h-[3px] rounded-b-full bg-cobalt" /></div>
+              {tabs.map(([k, l]) => (
+                <button key={k} onClick={() => setTab(k)} className={`min-w-0 py-2.5 flex flex-col items-center gap-1 text-xs font-medium transition-colors duration-300 ${tab === k ? 'text-cobalt' : 'text-ink/50'}`}><Icon n={k} />{l}</button>
+              ))}
+            </nav>
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 min-h-0 flex">
+          <aside className="w-64 shrink-0 px-6 pb-6 flex flex-col">
+            <div className="font-display text-4xl px-4 mb-10">Tally</div>
+            <nav className="relative flex flex-col gap-1">
+              <div className="absolute inset-x-0 top-0 h-12 rounded-full bg-ink" style={{ transform: `translateY(${idx * 52}px)`, transition: 'transform .5s cubic-bezier(.22,1,.36,1)' }} />
+              {tabs.map(([k, l]) => (
+                <button key={k} onClick={() => setTab(k)} className={`relative z-10 h-12 px-4 flex items-center gap-3 rounded-full text-[15px] font-medium transition-colors duration-300 ${tab === k ? 'text-white' : 'text-ink/60 hover:text-ink'}`}><Icon n={k} />{l}</button>
+              ))}
+            </nav>
+            <div className="mt-auto px-4 text-sm text-ink/50 flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${settings.key ? 'bg-emerald-500' : 'bg-ink/25'}`} />{settings.key ? 'Gemini connected' : 'Gemini not connected'}
+            </div>
+          </aside>
+          <main ref={scroller} className="scroll flex-1 min-w-0 px-10 pt-2 pb-10"><div className="max-w-[1200px]">{header}{view}</div></main>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
