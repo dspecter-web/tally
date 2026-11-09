@@ -1,0 +1,852 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta id="vp" name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tally – Nutrition & Workouts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script>
+  tailwind.config = { theme: { extend: {
+    fontFamily: { display: ['"Instrument Serif"', 'Georgia', 'serif'], sans: ['"Hanken Grotesk"', 'system-ui', 'sans-serif'] },
+    colors: { ink: '#0F1419', cobalt: '#5B4DF5', fog: '#EEF0FB' }
+  } } };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.5/babel.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; max-width: 100%; overflow-x: clip; -webkit-text-size-adjust: 100%; }
+  @supports not (overflow-x: clip) { html, body { overflow-x: hidden; } }
+  body { font-family: 'Hanken Grotesk', system-ui, sans-serif; background: #F1F0FF; color: #0F1419; overflow-wrap: anywhere; }
+  body::before { content: ''; position: fixed; inset: -5%; z-index: -1; pointer-events: none;
+    background: radial-gradient(48rem 34rem at 92% -8%, rgba(139,92,246,.30), transparent 62%), radial-gradient(42rem 30rem at -8% 8%, rgba(14,165,233,.24), transparent 62%),
+      radial-gradient(40rem 30rem at 70% 108%, rgba(244,63,94,.20), transparent 62%), radial-gradient(34rem 26rem at 10% 100%, rgba(251,191,36,.16), transparent 62%);
+    animation: drift 26s ease-in-out infinite; }
+  @keyframes drift { 0%, 100% { transform: translate3d(0, 0, 0) scale(1) } 50% { transform: translate3d(-2%, 2%, 0) scale(1.06) } }
+  #root { height: 100vh; height: 100dvh; max-width: 100%; }
+  img, svg, video, canvas { max-width: 100%; }
+  .scroll { overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+  .strike { background: linear-gradient(currentColor, currentColor) no-repeat 0 58% / 0% 1.5px; transition: background-size .5s ease, color .5s; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+  .strike.done { background-size: 100% 1.5px; }
+  .card { background: rgba(255,255,255,.80); -webkit-backdrop-filter: blur(16px) saturate(1.3); backdrop-filter: blur(16px) saturate(1.3); border: 1px solid rgba(255,255,255,.95); border-radius: 28px;
+    box-shadow: 0 1px 0 rgba(255,255,255,.9) inset, 0 22px 50px -26px rgba(79,70,229,.32), 0 4px 14px -8px rgba(15,20,25,.10); }
+  .lift { transition: transform .28s cubic-bezier(.22,1,.36,1), box-shadow .28s; }
+  .lift:hover { transform: translateY(-2px); box-shadow: 0 1px 0 rgba(255,255,255,.9) inset, 0 26px 54px -24px rgba(79,70,229,.42), 0 6px 16px -8px rgba(15,20,25,.12); }
+  .hero { position: relative; overflow: hidden; border-radius: 28px; color: #fff;
+    background: radial-gradient(120% 120% at 100% 0%, rgba(217,70,239,.95) 0%, transparent 55%), radial-gradient(110% 110% at 0% 100%, rgba(14,165,233,.9) 0%, transparent 55%), linear-gradient(135deg, #3B2FD0, #5B4DF5 55%, #7C3AED);
+    box-shadow: 0 34px 60px -30px rgba(79,70,229,.75), 0 1px 0 rgba(255,255,255,.3) inset; }
+  .hero-mint { background: radial-gradient(120% 120% at 100% 0%, rgba(253,224,71,.85) 0%, transparent 50%), radial-gradient(110% 110% at 0% 100%, rgba(6,182,212,.9) 0%, transparent 55%), linear-gradient(135deg, #047857, #10B981 60%, #14B8A6);
+    box-shadow: 0 34px 60px -30px rgba(5,150,105,.7), 0 1px 0 rgba(255,255,255,.3) inset; }
+  .hero::after { content: ''; position: absolute; inset: -40%; pointer-events: none; background: conic-gradient(from 0deg, transparent 0 70%, rgba(255,255,255,.14) 85%, transparent 100%); animation: sweep 16s linear infinite; }
+  .hero > * { position: relative; z-index: 1; }
+  @keyframes sweep { to { transform: rotate(360deg) } }
+  .btn { background: linear-gradient(135deg, #5B4DF5, #8B5CF6 60%, #C026D3); color: #fff; font-weight: 500; border-radius: 9999px; box-shadow: 0 12px 26px -12px rgba(91,77,245,.85);
+    transition: transform .2s, box-shadow .2s, filter .2s; }
+  .btn:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 16px 30px -12px rgba(91,77,245,.95); }
+  .btn:active:not(:disabled) { transform: scale(.98); }
+  .btn:disabled { opacity: .6; }
+  .field { background: rgba(255,255,255,.92); border-radius: 14px; padding: 12px 14px; width: 100%; min-width: 0; max-width: 100%; font: inherit; font-size: 16px; outline: none; border: 1.5px solid rgba(91,77,245,.14); transition: border-color .2s, box-shadow .2s, background .2s; }
+  .field:hover { border-color: rgba(91,77,245,.3); }
+  .field:focus { background: #fff; border-color: #5B4DF5; box-shadow: 0 0 0 4px rgba(91,77,245,.14); }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
+  @keyframes rise { from { opacity: 0; transform: translateY(-12px) scale(.98) } to { opacity: 1; transform: none } }
+  @keyframes pop { 0% { transform: scale(.7) } 60% { transform: scale(1.15) } 100% { transform: scale(1) } }
+  .fade { animation: fade .35s cubic-bezier(.22,1,.36,1) both }
+  .rise { animation: rise .55s cubic-bezier(.22,1,.36,1) both }
+  .pop { animation: pop .35s ease-out }
+  .check path { stroke-dasharray: 24; stroke-dashoffset: 24; transition: stroke-dashoffset .35s ease .05s }
+  .on .check path { stroke-dashoffset: 0 }
+  :focus-visible { outline: 2px solid #5B4DF5; outline-offset: 2px }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important } .animate-spin { animation: spin 1s linear infinite !important } }
+</style>
+</head>
+<body>
+<div id="root"><div id="boot" style="font:16px system-ui,sans-serif;padding:40px;color:#0F1419">Loading…</div></div>
+<script>
+  setTimeout(function () {
+    var boot = document.getElementById('boot'); if (!boot) return;
+    var missing = [];
+    if (typeof React === 'undefined') missing.push('React'); if (typeof ReactDOM === 'undefined') missing.push('ReactDOM');
+    if (typeof Babel === 'undefined') missing.push('Babel'); if (typeof tailwind === 'undefined') missing.push('Tailwind');
+    var msg = { en: 'Tally could not start. It loads React, Babel and Tailwind from the internet: check your connection, ad-blocker or firewall, then reload. Details are in the browser console (F12).',
+      tr: 'Tally başlatılamadı. React, Babel ve Tailwind internetten yüklenir: bağlantını, reklam engelleyiciyi ya da güvenlik duvarını kontrol edip sayfayı yenile. Ayrıntılar tarayıcı konsolunda (F12).',
+      de: 'Tally konnte nicht gestartet werden. React, Babel und Tailwind werden aus dem Internet geladen: Prüfe Verbindung, Werbeblocker oder Firewall und lade die Seite neu. Details stehen in der Browser-Konsole (F12).' };
+    boot.textContent = (msg[(navigator.language || 'en').slice(0, 2)] || msg.en) + (missing.length ? ' [' + missing.join(', ') + ']' : '');
+    console.error('[Tally] the app did not start within 12 s. Missing libraries:', missing);
+  }, 12000);
+</script>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef } = React;
+
+/* ---------- helpers ---------- */
+const dayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+const DIAG = [];
+const log = (level, msg, data) => {
+  DIAG.push({ time: new Date().toISOString(), level, msg, data }); if (DIAG.length > 100) DIAG.shift();
+  try { (console[level] || console.log)('[Tally]', msg, data === undefined ? '' : data); } catch {}
+};
+window.tallyLog = () => DIAG;   // type tallyLog() in the browser console to see recent events
+window.addEventListener('error', e => log('error', 'uncaught error', { message: e.message, at: `${e.filename}:${e.lineno}` }));
+window.addEventListener('unhandledrejection', e => log('error', 'unhandled promise rejection', { reason: String((e.reason && e.reason.message) || e.reason) }));
+
+function useStore(key, init, validate) {
+  const [v, setV] = useState(() => {
+    try { const s = localStorage.getItem(key); if (s === null) return init; const parsed = JSON.parse(s); return validate ? validate(parsed, init) : parsed; }
+    catch (e) { log('warn', `could not read "${key}", using defaults`, String(e)); return init; }
+  });
+  useEffect(() => { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) { log('warn', `could not save "${key}"`, String(e)); } }, [key, v]);
+  return [v, setV];
+}
+
+function useMedia(q) {
+  const [m, setM] = useState(() => matchMedia(q).matches);
+  useEffect(() => { const l = matchMedia(q), f = () => setM(l.matches); f(); l.addEventListener('change', f); return () => l.removeEventListener('change', f); }, [q]);
+  return m;
+}
+
+function useCount(target, ms = 1000) {
+  const [v, setV] = useState(0); const from = useRef(0);
+  useEffect(() => {
+    const s = from.current, t0 = performance.now(); let r;
+    const step = t => { const p = Math.min(1, (t - t0) / ms), n = Math.round(s + (target - s) * (1 - Math.pow(1 - p, 3))); from.current = n; setV(n); if (p < 1) r = requestAnimationFrame(step); };
+    r = requestAnimationFrame(step); return () => cancelAnimationFrame(r);
+  }, [target]);
+  return v;
+}
+
+const shrink = (src, max = 1024, q = .8) => {
+  const w = src.videoWidth || src.width, h = src.videoHeight || src.height, k = Math.min(1, max / Math.max(w, h));
+  const c = document.createElement('canvas'); c.width = Math.round(w * k); c.height = Math.round(h * k);
+  c.getContext('2d').drawImage(src, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', q);
+};
+const readImg = f => new Promise((ok, no) => { const r = new FileReader(); r.onerror = no; r.onload = () => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = r.result; }; r.readAsDataURL(f); });
+const thumbOf = d => new Promise(ok => { const i = new Image(); i.onload = () => { try { ok(shrink(i, 200, .7)); } catch { ok(null); } }; i.onerror = () => ok(null); i.src = d; });
+
+const LANGS = [['tr', 'Türkçe'], ['en', 'English'], ['de', 'Deutsch']];
+const LANG_NAME = { tr: 'Turkish', en: 'English', de: 'German' };
+let LANG = 'en';
+const LOCALE = () => ({ tr: 'tr-TR', de: 'de-DE', en: 'en-US' })[LANG];
+const guessLang = () => { const l = (navigator.language || 'en').slice(0, 2); return ['tr', 'de'].includes(l) ? l : 'en'; };
+const I18N = {
+  en: {
+    crash_title: 'This tab hit a problem', crash_body: 'Your data is safe. Try again, or reset the workout list if the problem keeps coming back.', crash_retry: 'Try again', crash_reset: 'Reset workout list', crash_copy: 'Copy diagnostics', crash_copied: 'Copied',
+    nav_nutrition: 'Nutrition', nav_workouts: 'Workouts', nav_settings: 'Settings',
+    view_auto: 'Auto', view_mobile: 'Mobile view', view_pc: 'PC view', view_label: 'Device view', lang_label: 'Language',
+    gemini_on: 'Gemini connected', gemini_off: 'Gemini not connected',
+    kcal_of: 'of {goal} kcal', kcal_left: 'kcal remaining', kcal_over: 'kcal over your goal',
+    protein: 'Protein', carbs: 'Carbs', fat: 'Fat', ps: 'P', cs: 'C', fs: 'F',
+    meals_today: 'Today’s meals', meals_empty: 'Nothing logged yet. Describe a meal or add a photo to start your day.',
+    estimated: 'estimated', delete_x: 'Delete {name}', meal: 'Meal',
+    log_title: 'Log a meal', log_ph: 'Two eggs, avocado toast and a flat white',
+    upload_photo: 'Upload photo', use_camera: 'Use camera', remove_photo: 'Remove photo', cam_cancel: 'Cancel', cam_capture: 'Capture',
+    cam_err: 'Camera unavailable. Upload a photo instead.', kcal_ph: 'kcal (optional)',
+    hint_ai: 'Leave empty and Gemini will estimate.', hint_manual: 'Calories needed without Gemini.',
+    add_key_link: 'Add a Gemini API key', check_settings: 'Test the connection in Settings',
+    btn_analyzing: 'Analyzing… {s}s', btn_analyze: 'Analyze and log', btn_log: 'Log meal',
+    err_empty: 'Describe your meal or add a photo.', err_need_key: 'Enter the calories, or add a Gemini API key in Settings to estimate them.',
+    err_not_image: 'Please choose an image file (JPG, PNG or WebP).', err_img_read: 'This image could not be read. HEIC photos are not supported by most desktop browsers; use JPG, PNG or WebP.',
+    err_generic: 'Something went wrong. Please try again.',
+    done_today: 'exercises done today', complete: 'Session complete', w_empty: 'No exercises yet. Add your first one below.',
+    w_mark_done: 'Mark {name} done', w_mark_undone: 'Mark {name} not done', w_remove: 'Remove {name}', w_add_ph: 'Add an exercise', w_detail_ph: '3 × 10', w_add: 'Add',
+    set_key: 'Gemini API key', set_key_ph: 'Paste your key from Google AI Studio', help_a: 'Create a free key at ',
+    help_b: '. It stays in this browser, and photos go straight to Google. Use a key without website restrictions, since a local file sends no referrer.',
+    set_model: 'Model', set_model_help: 'If this model is unavailable or over quota, newer ones are tried automatically.', set_goal: 'Daily calorie goal',
+    test_btn: 'Test connection', testing: 'Testing…', test_1: 'Step 1 of 2: checking your key with Google…',
+    test_2: 'Key accepted. Step 2 of 2: trying {model} (up to 30 seconds per model)…', test_ok: 'Connected. {model} recognized “{name}” at about {kcal} kcal.',
+    test_fail: 'The test failed.', test_none: 'Your key is valid, but it has no Gemini Flash model available.', test_food: 'one medium banana',
+    e_quota: 'Rate or quota limit reached for this key. Wait a minute and try again, or check your usage in Google AI Studio.',
+    e_key: 'Google says this API key is not valid. Copy it again from aistudio.google.com/apikey.',
+    e_region: 'The Gemini API is not available in your region for this key.',
+    e_403: 'Google denied access. Check that the key’s project has the Gemini API enabled and that the key has no website or IP restriction (a local file sends no referrer). Details: {d}',
+    e_404: 'The model “{model}” is not available for this key.', e_5xx: 'Google’s servers are busy (error {code}). Try again in a moment.',
+    e_other: 'Request failed ({code}): {d}', e_unknown: 'unknown error',
+    d_offline: 'Your device appears to be offline. Connect to the internet and try again.',
+    d_frame: 'This page is running inside another page (a preview or an app), which blocks requests to Google. Save it as index.html and open it directly in Chrome, Edge, Firefox or Safari.',
+    d_blocked: 'Your browser can reach Google, but generativelanguage.googleapis.com is blocked. An ad-blocker, antivirus web shield, DNS filter or firewall is the likely cause. Allow that domain, or try a private window with extensions turned off.',
+    d_nogoogle: 'Your browser cannot reach Google at all. Check your internet connection, VPN or proxy, and try another network.',
+    d_cors: 'Google is reachable, but the browser blocked the request. Try another browser, or a private window with extensions turned off.',
+    e_timeout: 'Gemini did not answer within {s} seconds. Check your connection and try again.',
+    e_list_timeout: 'Google did not answer within 15 seconds, even to a simple request. Your network, VPN, proxy or antivirus is slowing or blocking connections to Google.',
+    e_blocked: 'Gemini blocked this request ({reason}). Try a different photo or description.', e_noanswer: 'Gemini returned no answer ({reason}). Try a clearer photo or description.',
+    e_empty: 'Gemini returned an empty answer. Try again.', e_format: 'Gemini answered in an unexpected format. Try again.',
+    e_nocal: 'Gemini could not estimate calories for this. Add more detail, or enter the calories yourself.',
+    e_nokey: 'Add your Gemini API key in Settings first.', e_keychars: 'The API key contains invalid characters. Paste it again from aistudio.google.com/apikey.',
+    e_tried: ' (Models tried: {models}.) Open Settings and press Test connection to find a model that works for you.'
+  },
+  tr: {
+    crash_title: 'Bu sekmede bir sorun oluştu', crash_body: 'Verilerin güvende. Tekrar dene; sorun sürerse egzersiz listesini sıfırlayabilirsin.', crash_retry: 'Tekrar dene', crash_reset: 'Egzersiz listesini sıfırla', crash_copy: 'Tanılamayı kopyala', crash_copied: 'Kopyalandı',
+    nav_nutrition: 'Beslenme', nav_workouts: 'Antrenman', nav_settings: 'Ayarlar',
+    view_auto: 'Otomatik', view_mobile: 'Mobil görünüm', view_pc: 'PC görünümü', view_label: 'Cihaz görünümü', lang_label: 'Dil',
+    gemini_on: 'Gemini bağlı', gemini_off: 'Gemini bağlı değil',
+    kcal_of: 'hedef: {goal} kcal', kcal_left: 'kcal kaldı', kcal_over: 'kcal hedefin üzerinde',
+    protein: 'Protein', carbs: 'Karbonh.', fat: 'Yağ', ps: 'P', cs: 'K', fs: 'Y',
+    meals_today: 'Bugünkü öğünler', meals_empty: 'Henüz bir şey kaydedilmedi. Yediğini yaz ya da fotoğraf ekle.',
+    estimated: 'tahmini', delete_x: '{name} öğününü sil', meal: 'Öğün',
+    log_title: 'Öğün ekle', log_ph: 'Menemen, iki dilim ekmek ve bir bardak çay',
+    upload_photo: 'Fotoğraf yükle', use_camera: 'Kamerayı kullan', remove_photo: 'Fotoğrafı kaldır', cam_cancel: 'İptal', cam_capture: 'Çek',
+    cam_err: 'Kamera kullanılamıyor. Bunun yerine fotoğraf yükle.', kcal_ph: 'kcal (isteğe bağlı)',
+    hint_ai: 'Boş bırakırsan Gemini tahmin eder.', hint_manual: 'Gemini olmadan kalori girmelisin.',
+    add_key_link: 'Gemini API anahtarı ekle', check_settings: 'Ayarlar’da bağlantıyı test et',
+    btn_analyzing: 'Analiz ediliyor… {s}s', btn_analyze: 'Analiz et ve kaydet', btn_log: 'Öğünü kaydet',
+    err_empty: 'Öğününü yaz ya da fotoğraf ekle.', err_need_key: 'Kaloriyi gir ya da tahmin için Ayarlar’dan Gemini API anahtarı ekle.',
+    err_not_image: 'Lütfen bir resim dosyası seç (JPG, PNG veya WebP).', err_img_read: 'Bu resim okunamadı. HEIC fotoğrafları çoğu masaüstü tarayıcıda desteklenmez; JPG, PNG veya WebP kullan.',
+    err_generic: 'Bir şeyler ters gitti. Lütfen tekrar dene.',
+    done_today: 'egzersiz bugün tamamlandı', complete: 'Antrenman tamamlandı', w_empty: 'Henüz egzersiz yok. Aşağıdan ilkini ekle.',
+    w_mark_done: '{name} tamamlandı olarak işaretle', w_mark_undone: '{name} tamamlanmadı olarak işaretle', w_remove: '{name} egzersizini kaldır', w_add_ph: 'Egzersiz ekle', w_detail_ph: '3 × 10', w_add: 'Ekle',
+    set_key: 'Gemini API anahtarı', set_key_ph: 'Google AI Studio’dan aldığın anahtarı yapıştır', help_a: 'Ücretsiz anahtarı şuradan oluştur: ',
+    help_b: '. Anahtar yalnızca bu tarayıcıda saklanır, fotoğraflar doğrudan Google’a gider. Web sitesi kısıtlaması olmayan bir anahtar kullan; yerel dosya referrer bilgisi göndermez.',
+    set_model: 'Model', set_model_help: 'Bu model kullanılamıyorsa ya da kotası dolduysa daha yeni modeller otomatik denenir.', set_goal: 'Günlük kalori hedefi',
+    test_btn: 'Bağlantıyı test et', testing: 'Test ediliyor…', test_1: 'Adım 1/2: Anahtarın Google ile kontrol ediliyor…',
+    test_2: 'Anahtar kabul edildi. Adım 2/2: {model} deneniyor (model başına en fazla 30 saniye)…', test_ok: 'Bağlandı. {model}, “{name}” yemeğini yaklaşık {kcal} kcal olarak tanıdı.',
+    test_fail: 'Test başarısız oldu.', test_none: 'Anahtarın geçerli ama kullanılabilir bir Gemini Flash modeli yok.', test_food: 'bir porsiyon çiğ köfte',
+    e_quota: 'Bu anahtar için hız ya da kota sınırına ulaşıldı. Bir dakika bekleyip tekrar dene ya da Google AI Studio’da kullanımını kontrol et.',
+    e_key: 'Google bu API anahtarının geçersiz olduğunu söylüyor. aistudio.google.com/apikey adresinden yeniden kopyala.',
+    e_region: 'Gemini API bu anahtar için bölgende kullanılamıyor.',
+    e_403: 'Google erişimi reddetti. Anahtarın projesinde Gemini API’nin etkin olduğunu ve anahtarda web sitesi ya da IP kısıtlaması bulunmadığını kontrol et (yerel dosya referrer göndermez). Ayrıntı: {d}',
+    e_404: '“{model}” modeli bu anahtar için kullanılamıyor.', e_5xx: 'Google sunucuları meşgul (hata {code}). Biraz sonra tekrar dene.',
+    e_other: 'İstek başarısız oldu ({code}): {d}', e_unknown: 'bilinmeyen hata',
+    d_offline: 'Cihazın çevrimdışı görünüyor. İnternete bağlanıp tekrar dene.',
+    d_frame: 'Bu sayfa başka bir sayfanın (önizleme ya da uygulama) içinde çalışıyor ve Google’a yapılan istekleri engelliyor. index.html olarak kaydedip doğrudan Chrome, Edge, Firefox veya Safari’de aç.',
+    d_blocked: 'Tarayıcın Google’a ulaşabiliyor ama generativelanguage.googleapis.com engelli. Büyük olasılıkla reklam engelleyici, antivirüs web koruması, DNS filtresi ya da güvenlik duvarı neden oluyor. Bu alan adına izin ver ya da eklentileri kapatıp gizli pencerede dene.',
+    d_nogoogle: 'Tarayıcın Google’a hiç ulaşamıyor. İnternet bağlantını, VPN ya da proxy’ni kontrol et ve başka bir ağ dene.',
+    d_cors: 'Google’a ulaşılabiliyor ama tarayıcı isteği engelledi. Başka bir tarayıcı dene ya da eklentileri kapatıp gizli pencerede dene.',
+    e_timeout: 'Gemini {s} saniye içinde yanıt vermedi. Bağlantını kontrol edip tekrar dene.',
+    e_list_timeout: 'Google basit bir isteğe bile 15 saniye içinde yanıt vermedi. Ağın, VPN’in, proxy’n ya da antivirüsün Google bağlantılarını yavaşlatıyor veya engelliyor.',
+    e_blocked: 'Gemini bu isteği engelledi ({reason}). Farklı bir fotoğraf ya da açıklama dene.', e_noanswer: 'Gemini yanıt vermedi ({reason}). Daha net bir fotoğraf ya da açıklama dene.',
+    e_empty: 'Gemini boş bir yanıt döndürdü. Tekrar dene.', e_format: 'Gemini beklenmeyen bir biçimde yanıt verdi. Tekrar dene.',
+    e_nocal: 'Gemini bunun için kalori tahmin edemedi. Daha fazla ayrıntı ekle ya da kaloriyi kendin gir.',
+    e_nokey: 'Önce Ayarlar’dan Gemini API anahtarını ekle.', e_keychars: 'API anahtarı geçersiz karakterler içeriyor. aistudio.google.com/apikey adresinden yeniden yapıştır.',
+    e_tried: ' (Denenen modeller: {models}.) Ayarlar’ı açıp Bağlantıyı test et’e basarak sana uygun bir model bul.'
+  },
+  de: {
+    crash_title: 'In diesem Tab ist ein Problem aufgetreten', crash_body: 'Deine Daten sind sicher. Versuche es erneut oder setze die Übungsliste zurück, falls das Problem bleibt.', crash_retry: 'Erneut versuchen', crash_reset: 'Übungsliste zurücksetzen', crash_copy: 'Diagnose kopieren', crash_copied: 'Kopiert',
+    nav_nutrition: 'Ernährung', nav_workouts: 'Training', nav_settings: 'Einstellungen',
+    view_auto: 'Automatisch', view_mobile: 'Mobilansicht', view_pc: 'PC-Ansicht', view_label: 'Geräteansicht', lang_label: 'Sprache',
+    gemini_on: 'Gemini verbunden', gemini_off: 'Gemini nicht verbunden',
+    kcal_of: 'von {goal} kcal', kcal_left: 'kcal übrig', kcal_over: 'kcal über dem Ziel',
+    protein: 'Eiweiß', carbs: 'Kohlenh.', fat: 'Fett', ps: 'E', cs: 'K', fs: 'F',
+    meals_today: 'Heutige Mahlzeiten', meals_empty: 'Noch nichts eingetragen. Beschreibe deine Mahlzeit oder füge ein Foto hinzu.',
+    estimated: 'geschätzt', delete_x: '{name} löschen', meal: 'Mahlzeit',
+    log_title: 'Mahlzeit eintragen', log_ph: 'Zwei Rühreier, Vollkornbrot und ein Milchkaffee',
+    upload_photo: 'Foto hochladen', use_camera: 'Kamera nutzen', remove_photo: 'Foto entfernen', cam_cancel: 'Abbrechen', cam_capture: 'Aufnehmen',
+    cam_err: 'Kamera nicht verfügbar. Lade stattdessen ein Foto hoch.', kcal_ph: 'kcal (optional)',
+    hint_ai: 'Leer lassen, dann schätzt Gemini.', hint_manual: 'Ohne Gemini sind Kalorien nötig.',
+    add_key_link: 'Gemini-API-Schlüssel hinzufügen', check_settings: 'Verbindung in den Einstellungen testen',
+    btn_analyzing: 'Analysiere… {s}s', btn_analyze: 'Analysieren und eintragen', btn_log: 'Mahlzeit eintragen',
+    err_empty: 'Beschreibe deine Mahlzeit oder füge ein Foto hinzu.', err_need_key: 'Gib die Kalorien ein oder füge in den Einstellungen einen Gemini-API-Schlüssel hinzu, um sie zu schätzen.',
+    err_not_image: 'Bitte wähle eine Bilddatei (JPG, PNG oder WebP).', err_img_read: 'Dieses Bild konnte nicht gelesen werden. HEIC-Fotos werden von den meisten Desktop-Browsern nicht unterstützt; nutze JPG, PNG oder WebP.',
+    err_generic: 'Etwas ist schiefgelaufen. Bitte versuche es erneut.',
+    done_today: 'Übungen heute erledigt', complete: 'Training abgeschlossen', w_empty: 'Noch keine Übungen. Füge unten die erste hinzu.',
+    w_mark_done: '{name} als erledigt markieren', w_mark_undone: '{name} als nicht erledigt markieren', w_remove: '{name} entfernen', w_add_ph: 'Übung hinzufügen', w_detail_ph: '3 × 10', w_add: 'Hinzufügen',
+    set_key: 'Gemini-API-Schlüssel', set_key_ph: 'Füge deinen Schlüssel aus Google AI Studio ein', help_a: 'Erstelle einen kostenlosen Schlüssel unter ',
+    help_b: '. Er bleibt nur in diesem Browser, und Fotos gehen direkt an Google. Nutze einen Schlüssel ohne Website-Einschränkung, da eine lokale Datei keinen Referrer sendet.',
+    set_model: 'Modell', set_model_help: 'Ist dieses Modell nicht verfügbar oder das Kontingent erschöpft, werden automatisch neuere Modelle versucht.', set_goal: 'Tägliches Kalorienziel',
+    test_btn: 'Verbindung testen', testing: 'Teste…', test_1: 'Schritt 1 von 2: Schlüssel wird bei Google geprüft…',
+    test_2: 'Schlüssel akzeptiert. Schritt 2 von 2: {model} wird getestet (bis zu 30 Sekunden pro Modell)…', test_ok: 'Verbunden. {model} hat „{name}“ mit etwa {kcal} kcal erkannt.',
+    test_fail: 'Der Test ist fehlgeschlagen.', test_none: 'Dein Schlüssel ist gültig, aber es ist kein Gemini-Flash-Modell verfügbar.', test_food: 'eine Portion Käsespätzle',
+    e_quota: 'Für diesen Schlüssel wurde das Raten- oder Kontingentlimit erreicht. Warte eine Minute und versuche es erneut oder prüfe die Nutzung in Google AI Studio.',
+    e_key: 'Google meldet, dass dieser API-Schlüssel ungültig ist. Kopiere ihn erneut von aistudio.google.com/apikey.',
+    e_region: 'Die Gemini-API ist für diesen Schlüssel in deiner Region nicht verfügbar.',
+    e_403: 'Google hat den Zugriff verweigert. Prüfe, ob im Projekt des Schlüssels die Gemini-API aktiviert ist und der Schlüssel keine Website- oder IP-Einschränkung hat (eine lokale Datei sendet keinen Referrer). Details: {d}',
+    e_404: 'Das Modell „{model}“ ist für diesen Schlüssel nicht verfügbar.', e_5xx: 'Die Google-Server sind ausgelastet (Fehler {code}). Versuche es gleich noch einmal.',
+    e_other: 'Anfrage fehlgeschlagen ({code}): {d}', e_unknown: 'unbekannter Fehler',
+    d_offline: 'Dein Gerät scheint offline zu sein. Verbinde dich mit dem Internet und versuche es erneut.',
+    d_frame: 'Diese Seite läuft innerhalb einer anderen Seite (Vorschau oder App), die Anfragen an Google blockiert. Speichere sie als index.html und öffne sie direkt in Chrome, Edge, Firefox oder Safari.',
+    d_blocked: 'Dein Browser erreicht Google, aber generativelanguage.googleapis.com ist blockiert. Wahrscheinlich liegt es an einem Werbeblocker, Antivirus-Webschutz, DNS-Filter oder einer Firewall. Erlaube diese Domain oder versuche es in einem privaten Fenster ohne Erweiterungen.',
+    d_nogoogle: 'Dein Browser erreicht Google überhaupt nicht. Prüfe deine Internetverbindung, VPN oder Proxy und versuche ein anderes Netzwerk.',
+    d_cors: 'Google ist erreichbar, aber der Browser hat die Anfrage blockiert. Versuche einen anderen Browser oder ein privates Fenster ohne Erweiterungen.',
+    e_timeout: 'Gemini hat nicht innerhalb von {s} Sekunden geantwortet. Prüfe deine Verbindung und versuche es erneut.',
+    e_list_timeout: 'Google hat nicht einmal auf eine einfache Anfrage innerhalb von 15 Sekunden geantwortet. Dein Netzwerk, VPN, Proxy oder Virenschutz verlangsamt oder blockiert Verbindungen zu Google.',
+    e_blocked: 'Gemini hat diese Anfrage blockiert ({reason}). Versuche ein anderes Foto oder eine andere Beschreibung.', e_noanswer: 'Gemini hat keine Antwort geliefert ({reason}). Versuche ein klareres Foto oder eine genauere Beschreibung.',
+    e_empty: 'Gemini hat eine leere Antwort geliefert. Versuche es erneut.', e_format: 'Gemini hat in einem unerwarteten Format geantwortet. Versuche es erneut.',
+    e_nocal: 'Gemini konnte dafür keine Kalorien schätzen. Gib mehr Details an oder trage die Kalorien selbst ein.',
+    e_nokey: 'Füge zuerst in den Einstellungen deinen Gemini-API-Schlüssel hinzu.', e_keychars: 'Der API-Schlüssel enthält ungültige Zeichen. Füge ihn erneut von aistudio.google.com/apikey ein.',
+    e_tried: ' (Versuchte Modelle: {models}.) Öffne die Einstellungen und drücke „Verbindung testen“, um ein passendes Modell zu finden.'
+  }
+};
+const t = (k, v) => {
+  let out = (I18N[LANG] && I18N[LANG][k]) ?? I18N.en[k] ?? k;
+  if (v) for (const x in v) out = out.split('{' + x + '}').join(v[x]);
+  return out;
+};
+
+const API = 'https://generativelanguage.googleapis.com/v1beta';
+const FALLBACK_MODELS = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-2.5-flash'];
+const TIMEOUT_MS = 30000;
+
+class GeminiError extends Error { constructor(msg, status) { super(msg); this.status = status; } }
+
+function explain(status, msg, model) {
+  const m = msg || '';
+  if (status === 429 || /quota|rate limit|RESOURCE_EXHAUSTED/i.test(m)) return t('e_quota');
+  if (status === 401 || /API key not valid|API_KEY_INVALID|API key expired/i.test(m)) return t('e_key');
+  if (/location is not supported/i.test(m)) return t('e_region');
+  if (status === 403) return t('e_403', { d: m });
+  if (status === 404) return t('e_404', { model });
+  if (status >= 500) return t('e_5xx', { code: status });
+  return t('e_other', { code: status, d: m || t('e_unknown') });
+}
+
+const ROOT = 'https://generativelanguage.googleapis.com/';
+const probe = async url => { try { await fetch(url, { mode: 'no-cors', cache: 'no-store', signal: AbortSignal.timeout(8000) }); return true; } catch { return false; } };
+
+async function diagnose() {
+  if (navigator.onLine === false) return t('d_offline');
+  if (window !== window.top) return t('d_frame');
+  const [api, google] = await Promise.all([probe(ROOT), probe('https://www.google.com/generate_204')]);
+  if (!api && google) return t('d_blocked');
+  if (!api) return t('d_nogoogle');
+  return t('d_cors');
+}
+
+async function callGemini(key, model, body, viaUrl = false) {
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
+  try {
+    const url = `${API}/models/${encodeURIComponent(model)}:generateContent` + (viaUrl ? `?key=${encodeURIComponent(key)}` : '');
+    const res = await fetch(url, {
+      method: 'POST', signal: ctl.signal, body: JSON.stringify(body),
+      headers: { 'Content-Type': 'application/json', ...(viaUrl ? {} : { 'x-goog-api-key': key }) }
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) throw new GeminiError(explain(res.status, j.error?.message, model), res.status);
+    return j;
+  } catch (e) {
+    if (e instanceof GeminiError) throw e;
+    if (e.name === 'AbortError') throw new GeminiError(t('e_timeout', { s: TIMEOUT_MS / 1000 }), 'timeout');
+    if (!viaUrl && await probe(ROOT)) return callGemini(key, model, body, true);   // reachable but blocked: retry without the custom header
+    throw new GeminiError(await diagnose(), 'network');
+  } finally { clearTimeout(timer); }
+}
+
+function parseReply(j) {
+  if (j.promptFeedback?.blockReason) throw new GeminiError(t('e_blocked', { reason: j.promptFeedback.blockReason }));
+  const c = j.candidates?.[0];
+  const out = (c?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join('');
+  if (!out) throw new GeminiError(c?.finishReason && c.finishReason !== 'STOP' ? t('e_noanswer', { reason: c.finishReason }) : t('e_empty'));
+  let r; try { const m = out.match(/\{[\s\S]*\}/); r = JSON.parse(m ? m[0] : out); } catch { throw new GeminiError(t('e_format')); }
+  const num = v => Math.max(0, Math.round(parseFloat(v) || 0)), calories = num(r.calories);
+  if (!calories) throw new GeminiError(t('e_nocal'));
+  return { name: String(r.name || '').trim(), note: String(r.portion || '').trim(), calories, protein: num(r.protein), carbs: num(r.carbs), fat: num(r.fat) };
+}
+
+const checkKey = k => {
+  const key = (k || '').trim().replace(/^["']|["']$/g, '');
+  if (!key) throw new GeminiError(t('e_nokey'));
+  if (!/^[\x21-\x7E]+$/.test(key)) throw new GeminiError(t('e_keychars'));
+  return key;
+};
+
+// Quick, simple GET: proves the key works and shows which models this key can really use.
+async function listModels(key) {
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 15000);
+  try {
+    const res = await fetch(`${API}/models?pageSize=200&key=${encodeURIComponent(key)}`, { signal: ctl.signal });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) throw new GeminiError(explain(res.status, j.error?.message, ''), res.status);
+    return (j.models || []).filter(m => (m.supportedGenerationMethods || []).includes('generateContent')).map(m => m.name.replace('models/', ''));
+  } catch (e) {
+    if (e instanceof GeminiError) throw e;
+    if (e.name === 'AbortError') throw new GeminiError(t('e_list_timeout'), 'timeout');
+    throw new GeminiError(await diagnose(), 'network');
+  } finally { clearTimeout(timer); }
+}
+
+// Newest stable Flash models first, then Flash-Lite.
+const pickModels = names => {
+  const v = n => { const m = n.match(/^gemini-(\d+(?:\.\d+)?)-flash$/); return m ? parseFloat(m[1]) : -1; };
+  return [...names.filter(n => v(n) >= 0).sort((a, b) => v(b) - v(a)), ...names.filter(n => /^gemini-[\d.]+-flash-lite$/.test(n))];
+};
+
+async function analyze({ key, model, models, text, image, onModel }) {
+  key = checkKey(key);
+  const L = LANG_NAME[LANG];
+  const prompt = `You are a nutrition expert for users in Turkey, Germany and English-speaking countries. The user's interface language is ${L}.` +
+    (text ? ` The user typed this food or meal: "${text}". It may be written in Turkish, English or German (or a mix), with special characters (ç ğ ı İ ö ş ü ä ß), missing diacritics (for example "cig kofte", "Spatzle", "mercimek corbasi"), typos, or regional dish names. Work out which dish is meant.` : '') +
+    (image ? ` ${text ? 'Also use' : 'Use'} the attached photo: identify every food and drink visible, including Turkish dishes (menemen, lahmacun, iskender, simit, börek, mantı), German dishes (Schnitzel, Currywurst, Käsespätzle, Brezel, Maultaschen) and international food.` : '') +
+    ` Estimate the nutrition of the whole portion. Reply only with JSON: {"name": the dish name written in ${L} (if the dish has a well-known original name in another language, add it in parentheses), "portion": one short sentence in ${L} naming the main ingredients and the portion you assumed, "calories": number, "protein": grams, "carbs": grams, "fat": grams}. Write every text value in ${L}, and use whole numbers for the numeric values.`;
+  const parts = [{ text: prompt }];
+  if (image) parts.push({ inline_data: { mime_type: 'image/jpeg', data: image.split(',')[1] } });
+  // Turn long "thinking" down: it is the main cause of slow answers on Flash models.
+  const think = m => /^gemini-2\.5-flash/.test(m) ? { thinkingBudget: 0 } : /^gemini-3/.test(m) ? { thinkingLevel: 'minimal' } : null;
+  const bodyFor = (m, t = true) => ({ contents: [{ parts }], generationConfig: { responseMimeType: 'application/json', temperature: 0.2, ...(t && think(m) ? { thinkingConfig: think(m) } : {}) } });
+  const attempt = async m => {
+    try { return await callGemini(key, m, bodyFor(m)); }
+    catch (e) { if (e.status === 400 && /think/i.test(e.message)) return callGemini(key, m, bodyFor(m, false)); throw e; }
+  };
+  const list = [...new Set((models || [model, ...FALLBACK_MODELS]).filter(Boolean))], tried = [];
+  let best;
+  for (const mdl of list) {
+    tried.push(mdl);
+    try {
+      const result = parseReply(await attempt(mdl));
+      if (onModel && mdl !== model) onModel(mdl);
+      return { ...result, model: mdl };
+    } catch (e) {
+      if (!best || best.status === 404) best = e;
+      if (!(e.status === 404 || e.status === 429 || e.status === 'timeout' || e.status >= 500)) throw e;   // only model-specific failures try the next model
+    }
+  }
+  if (tried.length > 1) best.message += t('e_tried', { models: tried.join(', ') });
+  throw best;
+}
+
+const ICONS = {
+  nutrition: 'M12 21c-4 0-7-3-7-7 0-3 2-5 4-5 1.2 0 2 .5 3 .5s1.8-.5 3-.5c2 0 4 2 4 5 0 4-3 7-7 7zM12 9c0-2 1-4 3-5',
+  workouts: 'M6 8v8M3 10v4M18 8v8M21 10v4M6 12h12',
+  settings: 'M4 7h10M18 7h2M4 17h2M10 17h10M14 5v4M6 15v4',
+  camera: 'M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 100-7 3.5 3.5 0 000 7z',
+  image: 'M4 5h16v14H4zM4 16l5-5 4 4 3-3 4 4',
+  trash: 'M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13',
+  x: 'M6 6l12 12M18 6L6 18',
+  globe: 'M12 21a9 9 0 100-18 9 9 0 000 18zM3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18',
+  chevron: 'M6 9l6 6 6-6', check: 'M5 12.5l4.5 4.5L19 7.5', logo: 'M12 3c4 3 6 6 6 9.5a6 6 0 01-12 0C6 9 8 6 12 3z',
+  key: 'M21 2l-2 2m-7.6 7.6a5.5 5.5 0 11-7.8 7.8 5.5 5.5 0 017.8-7.8zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4',
+  zap: 'M13 2L3 14h9l-1 8 10-12h-9l1-8z', target: 'M22 12a10 10 0 11-20 0 10 10 0 0120 0zM18 12a6 6 0 11-12 0 6 6 0 0112 0zM14 12a2 2 0 11-4 0 2 2 0 014 0z'
+};
+const Icon = ({ n, s = 20 }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={ICONS[n]} /></svg>;
+
+/* ---------- nutrition ---------- */
+function Ring({ value, goal }) {
+  const R = 118, C = 2 * Math.PI * R, [m, setM] = useState(false), shown = useCount(value);
+  useEffect(() => { const id = setTimeout(() => setM(true), 120); return () => clearTimeout(id); }, []);
+  const pct = m ? Math.min(1, goal ? value / goal : 0) : 0, over = value > goal;
+  return (
+    <div className="relative w-full max-w-[280px] aspect-square shrink-0 mx-auto" style={{ containerType: 'inline-size' }}>
+      <svg viewBox="0 0 280 280" className="-rotate-90 w-full h-full overflow-visible">
+        <defs>
+          <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#67E8F9" /><stop offset="55%" stopColor="#F0ABFC" /><stop offset="100%" stopColor="#FDE68A" /></linearGradient>
+          <linearGradient id="ringOver" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#FDA4AF" /><stop offset="100%" stopColor="#FB7185" /></linearGradient>
+        </defs>
+        <circle cx="140" cy="140" r={R} fill="none" stroke="rgba(255,255,255,.18)" strokeWidth="14" />
+        <circle cx="140" cy="140" r={R} fill="none" stroke={over ? 'url(#ringOver)' : 'url(#ringGrad)'} strokeWidth="14" strokeLinecap="round"
+          strokeDasharray={C} strokeDashoffset={C * (1 - pct)} style={{ filter: 'drop-shadow(0 0 8px rgba(255,255,255,.5))', transition: 'stroke-dashoffset 1.2s cubic-bezier(.22,1,.36,1)' }} />
+      </svg>
+      <div className="absolute inset-0 grid place-content-center text-center">
+        <div className="font-display leading-none tabular-nums text-white" style={{ fontSize: '30cqw' }}>{shown}</div>
+        <div className="mt-2 text-sm text-white/70">{t('kcal_of', { goal })}</div>
+      </div>
+    </div>
+  );
+}
+
+function Camera({ onSnap, onClose }) {
+  const v = useRef(); const [err, setErr] = useState('');
+  useEffect(() => {
+    let s;
+    navigator.mediaDevices?.getUserMedia({ video: true }).then(m => { s = m; v.current.srcObject = m; }).catch(() => setErr(t('cam_err')));
+    return () => s && s.getTracks().forEach(t => t.stop());
+  }, []);
+  return (
+    <div className="rise rounded-2xl overflow-hidden bg-ink relative">
+      {err ? <div className="p-8 text-white/70 text-sm text-center">{err}</div> : <video ref={v} autoPlay playsInline muted className="w-full aspect-video object-cover" />}
+      <div className="absolute bottom-3 inset-x-3 flex justify-between">
+        <button type="button" onClick={onClose} className="px-4 py-2 rounded-full bg-white/15 text-white text-sm backdrop-blur">{t('cam_cancel')}</button>
+        {!err && <button type="button" onClick={() => onSnap(shrink(v.current))} className="px-4 py-2 rounded-full bg-white text-ink text-sm font-medium">{t('cam_capture')}</button>}
+      </div>
+    </div>
+  );
+}
+
+function LogMeal({ settings, onAdd, goSettings, setModel, compact, sticky }) {
+  const [text, setText] = useState(''), [cal, setCal] = useState(''), [img, setImg] = useState(null);
+  const [cam, setCam] = useState(false), [busy, setBusy] = useState(false), [err, setErr] = useState(''), [secs, setSecs] = useState(0);
+  useEffect(() => { if (!busy) return setSecs(0); const t = setInterval(() => setSecs(x => x + 1), 1000); return () => clearInterval(t); }, [busy]);
+  const pick = async f => {
+    if (!f) return;
+    if (f.type && !f.type.startsWith('image/')) return setErr(t('err_not_image'));
+    try { setImg(shrink(await readImg(f))); setErr(''); }
+    catch { setErr(t('err_img_read')); }
+  };
+  async function submit(e) {
+    e.preventDefault(); if (busy) return; setErr('');
+    if (!text.trim() && !img) return setErr(t('err_empty'));
+    setBusy(true);
+    try {
+      let m = { name: text.trim() || t('meal'), note: '', cal: parseInt(cal) || 0, p: 0, c: 0, f: 0, ai: false };
+      if (!m.cal) {
+        if (!(settings.key || '').trim()) throw new Error(t('err_need_key'));
+        const r = await analyze({ key: settings.key, model: settings.model, text: text.trim(), image: img, onModel: setModel });
+        m = { name: r.name || text.trim() || t('meal'), note: r.note, cal: r.calories, p: r.protein, c: r.carbs, f: r.fat, ai: true };
+      }
+      const thumb = img ? await thumbOf(img) : null;
+      onAdd({ ...m, thumb });
+      setText(''); setCal(''); setImg(null);
+    } catch (x) { setErr(x.message || t('err_generic')); }
+    finally { setBusy(false); }   // the spinner can never get stuck
+  }
+  const auto = !!settings.key && !cal;
+  return (
+    <form onSubmit={submit} className={`card min-w-0 ${compact ? 'p-5' : 'p-7'} ${sticky ? 'sticky top-2' : ''}`} onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); pick(e.dataTransfer.files[0]); }}>
+      <h2 className="font-display text-3xl mb-5 flex items-center gap-3"><span className="w-10 h-10 rounded-2xl grid place-items-center text-white bg-gradient-to-br from-amber-400 to-rose-500 shadow-[0_8px_18px_-8px_rgba(244,63,94,.7)]"><Icon n="nutrition" s={20} /></span>{t('log_title')}</h2>
+      <textarea rows="3" value={text} onChange={e => setText(e.target.value)} className="field resize-none" placeholder={t('log_ph')} />
+      <div className="mt-3">
+        {cam ? <Camera onClose={() => setCam(false)} onSnap={d => { setImg(d); setCam(false); }} /> :
+          img ? (
+            <div className="rise relative rounded-2xl overflow-hidden">
+              <img src={img} alt="Meal preview" className="w-full h-44 object-cover" />
+              <button type="button" aria-label={t('remove_photo')} onClick={() => setImg(null)} className="absolute top-2 right-2 w-8 h-8 rounded-full bg-ink/70 text-white grid place-items-center"><Icon n="x" s={16} /></button>
+            </div>
+          ) : (
+            <div className="flex gap-2 [&>*]:min-w-0 [&>*]:px-2">
+              <label className="flex-1 cursor-pointer rounded-2xl border border-dashed border-ink/20 py-4 flex items-center justify-center gap-2 text-sm text-ink/60 hover:border-cobalt hover:text-cobalt transition-colors">
+                <Icon n="image" s={18} /> {t('upload_photo')}
+                <input type="file" accept="image/*" className="sr-only" onChange={e => { pick(e.target.files[0]); e.target.value = ''; }} />
+              </label>
+              <button type="button" onClick={() => setCam(true)} className="flex-1 rounded-2xl border border-dashed border-ink/20 py-4 flex items-center justify-center gap-2 text-sm text-ink/60 hover:border-cobalt hover:text-cobalt transition-colors"><Icon n="camera" s={18} /> {t('use_camera')}</button>
+            </div>
+          )}
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <input type="number" min="0" value={cal} onChange={e => setCal(e.target.value)} className="field !w-40" placeholder={t('kcal_ph')} />
+        <span className="text-sm text-ink/45 leading-snug flex-1 min-w-[9rem]">{settings.key ? t('hint_ai') : t('hint_manual')}</span>
+      </div>
+      {err && <div role="alert" className="rise mt-3 text-sm rounded-xl bg-red-50 text-red-700 px-3 py-2">{err}{settings.key && <button type="button" onClick={goSettings} className="block mt-1 underline underline-offset-4">{t('check_settings')}</button>}</div>}
+      {!settings.key && <button type="button" onClick={goSettings} className="mt-3 text-sm text-cobalt underline underline-offset-4">{t('add_key_link')}</button>}
+      <button disabled={busy} className="btn mt-5 w-full h-12 flex items-center justify-center gap-2">
+        {busy && <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
+        {busy ? t('btn_analyzing', { s: secs }) : auto ? t('btn_analyze') : t('btn_log')}
+      </button>
+    </form>
+  );
+}
+
+const TINTS = ['from-amber-200 to-rose-200 text-rose-700', 'from-emerald-200 to-teal-200 text-teal-700', 'from-sky-200 to-indigo-200 text-indigo-700', 'from-fuchsia-200 to-violet-200 text-violet-700'];
+const tint = n => TINTS[[...String(n)].reduce((a, c) => a + c.charCodeAt(0), 0) % TINTS.length];
+const REVEAL = 'opacity-0 group-hover:opacity-100 focus:opacity-100 [@media(hover:none)]:opacity-70 transition';
+
+function Nutrition({ meals, setMeals, settings, goSettings, setModel, compact, two }) {
+  const today = meals.filter(m => m.date === dayKey());
+  const sum = k => today.reduce((a, m) => a + (m[k] || 0), 0), total = sum('cal'), left = settings.goal - total;
+  const add = m => setMeals(a => [{ id: uid(), date: dayKey(), created: Date.now(), time: new Date().toLocaleTimeString(LOCALE(), { hour: '2-digit', minute: '2-digit' }), ...m }, ...a]);
+  const MACROS = [['protein', 'p', '#67E8F9'], ['carbs', 'c', '#FDE68A'], ['fat', 'f', '#F9A8D4']];
+  const summary = (
+    <section className={`hero flex flex-wrap items-center justify-center gap-x-10 gap-y-6 ${compact ? 'p-5' : 'p-8'}`}>
+      <Ring value={total} goal={settings.goal} />
+      <div className={`flex-1 min-w-[200px] ${compact ? 'text-center' : ''}`}>
+        <div className="font-display text-6xl tabular-nums leading-none">{Math.abs(left)}</div>
+        <div className="text-white/70 mt-1 mb-6">{left >= 0 ? t('kcal_left') : t('kcal_over')}</div>
+        <div className="grid grid-cols-3 gap-2.5">
+          {MACROS.map(([k, key, color]) => (
+            <div key={k} className="min-w-0 rounded-2xl bg-white/15 backdrop-blur px-3 py-2.5 text-left border border-white/20">
+              <div className="flex items-center gap-1.5 text-xs text-white/80"><span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} /><span className="truncate">{t(k)}</span></div>
+              <div className="text-xl font-semibold tabular-nums mt-0.5">{sum(key)}<span className="text-sm text-white/60 font-normal"> g</span></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+  const list = (
+    <section className="min-w-0">
+      <h2 className="font-display text-3xl mb-4 flex items-center gap-3">{t('meals_today')}{today.length > 0 && <span className="text-sm font-sans font-semibold px-2.5 py-0.5 rounded-full text-white bg-gradient-to-r from-cobalt to-violet-500">{today.length}</span>}</h2>
+      {today.length === 0 ? <p className="card p-6 text-ink/50">{t('meals_empty')}</p> : (
+        <ul className="space-y-3">
+          {today.map(m => (
+            <li key={m.id} className={`card lift !rounded-[22px] p-3 pr-4 flex items-center gap-3 group min-w-0 ${Date.now() - m.created < 1500 ? 'rise' : ''}`}>
+              {m.thumb ? <img src={m.thumb} alt="" className="w-12 h-12 shrink-0 rounded-2xl object-cover" /> : <div className={`w-12 h-12 shrink-0 rounded-2xl bg-gradient-to-br grid place-items-center font-display text-2xl ${tint(m.name)}`}>{m.name[0]?.toUpperCase()}</div>}
+              <div className="flex-1 min-w-0">
+                <div className="font-medium truncate">{m.name}</div>
+                <div className="text-sm text-ink/45 truncate">{m.time}{m.ai && m.p + m.c + m.f > 0 ? ` · ${t('ps')} ${m.p}  ${t('cs')} ${m.c}  ${t('fs')} ${m.f}` : ''}{m.ai ? ` · ${t('estimated')}` : ''}</div>
+                {m.note && <div className="text-sm text-ink/60 truncate">{m.note}</div>}
+              </div>
+              <div className="font-display text-3xl tabular-nums shrink-0 bg-gradient-to-br from-cobalt to-fuchsia-500 bg-clip-text text-transparent">{m.cal}</div>
+              <button aria-label={t('delete_x', { name: m.name })} onClick={() => setMeals(a => a.filter(x => x.id !== m.id))} className={`shrink-0 text-ink/40 hover:text-red-600 ${REVEAL}`}><Icon n="trash" s={18} /></button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+  const log = <LogMeal settings={settings} onAdd={add} goSettings={goSettings} setModel={setModel} compact={compact} sticky={two} />;
+  return two
+    ? <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,.9fr)] gap-8 items-start"><div className="space-y-8 min-w-0">{summary}{list}</div>{log}</div>
+    : <div className="space-y-6 min-w-0">{summary}{log}{list}</div>;
+}
+
+/* ---------- workouts ---------- */
+const DEFAULT_WORKOUT = [['Barbell squat', '4 × 6'], ['Bench press', '4 × 8'], ['Bent-over row', '3 × 10'], ['Overhead press', '3 × 8'], ['Plank', '3 × 45 s']].map(([name, detail]) => ({ id: uid(), name, detail, doneOn: null }));
+
+// Repairs saved workout data so damaged or old entries can never crash the tab.
+function sanitizeWorkout(v, fallback) {
+  if (!Array.isArray(v)) { log('warn', 'saved workout data was not a list; reset to defaults'); return fallback; }
+  const seen = new Set();
+  const out = v.filter(i => i && typeof i === 'object' && String(i.name ?? '').trim()).map(i => {
+    let id = typeof i.id === 'string' && i.id ? i.id : uid(); while (seen.has(id)) id = uid(); seen.add(id);
+    return { id, name: String(i.name).trim(), detail: String(i.detail ?? '').trim(), doneOn: typeof i.doneOn === 'string' ? i.doneOn : null };
+  });
+  if (out.length !== v.length) log('warn', 'repaired damaged workout entries', { kept: out.length, total: v.length });
+  return out;
+}
+
+function Workouts({ items, setItems, compact }) {
+  const day = dayKey(), done = items.filter(i => i.doneOn === day).length, pct = items.length ? done / items.length : 0;
+  const [name, setName] = useState(''), [detail, setDetail] = useState('');
+  const toggle = id => { log('info', 'workout ticked/unticked', { id }); setItems(a => a.map(i => i.id === id ? { ...i, doneOn: i.doneOn === day ? null : day } : i)); };
+  const add = e => { e.preventDefault(); if (!name.trim()) return; log('info', 'workout exercise added', { name: name.trim() }); setItems(a => [...a, { id: uid(), name: name.trim(), detail: detail.trim(), doneOn: null }]); setName(''); setDetail(''); };
+  return (
+    <div className="max-w-2xl w-full min-w-0">
+      <section className={`hero hero-mint mb-6 ${compact ? 'p-5' : 'p-8'}`}>
+        <div className="flex flex-wrap items-end justify-between gap-x-4">
+          <div className={`font-display tabular-nums ${compact ? 'text-5xl' : 'text-6xl'}`}>{done}<span className="text-white/50"> / {items.length}</span></div>
+          <div className="text-white/80 pb-1">{items.length && done === items.length ? <span className="rise inline-block text-amber-200 font-semibold">{t('complete')}</span> : t('done_today')}</div>
+        </div>
+        <div className="mt-5 h-2.5 rounded-full bg-white/25 overflow-hidden"><div className="h-full rounded-full bg-white shadow-[0_0_14px_rgba(255,255,255,.8)]" style={{ width: `${pct * 100}%`, transition: 'width .7s cubic-bezier(.22,1,.36,1)' }} /></div>
+      </section>
+      {items.length === 0 && <p className="card p-6 text-ink/50 mb-6">{t('w_empty')}</p>}
+      <ul className="space-y-3">
+        {items.map(i => {
+          const d = i.doneOn === day;
+          return (
+            <li key={i.id} className={`card lift !rounded-[22px] px-4 py-3.5 flex items-center gap-3 group min-w-0 ${i.doneOn === day ? 'ring-1 ring-emerald-300/70' : ''}`}>
+              <button onClick={() => toggle(i.id)} aria-pressed={d} aria-label={d ? t('w_mark_undone', { name: i.name }) : t('w_mark_done', { name: i.name })}
+                className={`${d ? 'on bg-gradient-to-br from-emerald-400 to-teal-500 border-transparent shadow-[0_6px_14px_-6px_rgba(16,185,129,.8)]' : 'border-ink/20 bg-white hover:border-emerald-500'} w-8 h-8 shrink-0 rounded-full border-2 grid place-items-center transition-colors duration-300`}>
+                <svg className={`check w-4 h-4 text-white ${d ? 'pop' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+              </button>
+              <div className="flex-1 min-w-0">
+                <span className={`strike text-lg font-medium ${d ? 'done text-ink/35' : ''}`}>{i.name}</span>
+                {compact && i.detail && <div className="text-sm text-ink/45">{i.detail}</div>}
+              </div>
+              {!compact && <span className="text-ink/45 tabular-nums shrink-0">{i.detail}</span>}
+              <button aria-label={t('w_remove', { name: i.name })} onClick={() => { log('info', 'workout exercise removed', { id: i.id }); setItems(a => a.filter(x => x.id !== i.id)); }} className={`shrink-0 text-ink/40 hover:text-red-600 ${REVEAL}`}><Icon n="trash" s={18} /></button>
+            </li>
+          );
+        })}
+      </ul>
+      <form onSubmit={add} className="mt-6 flex flex-wrap gap-3">
+        <input value={name} onChange={e => setName(e.target.value)} className={`field !bg-white ${compact ? 'basis-full' : 'flex-1'}`} placeholder={t('w_add_ph')} />
+        <input value={detail} onChange={e => setDetail(e.target.value)} className={`field !bg-white ${compact ? 'flex-1' : '!w-40'}`} placeholder="3 × 10" />
+        <button className="btn px-6 h-12 shrink-0">{t('w_add')}</button>
+      </form>
+    </div>
+  );
+}
+
+/* ---------- settings ---------- */
+function Settings({ settings, setSettings, compact }) {
+  const set = k => e => setSettings(s => ({ ...s, [k]: k === 'goal' ? Math.max(0, parseInt(e.target.value) || 0) : e.target.value }));
+  const [status, setStatus] = useState(null), [testing, setTesting] = useState(false);
+  async function test() {
+    setStatus({ ok: null, msg: t('test_1') }); setTesting(true);
+    try {
+      const key = checkKey(settings.key), names = pickModels(await listModels(key));
+      if (!names.length) throw new GeminiError(t('test_none'));
+      setStatus({ ok: null, msg: t('test_2', { model: names[0] }) });
+      const r = await analyze({ key, model: settings.model, models: names.slice(0, 3), text: t('test_food'), onModel: m => setSettings(s => ({ ...s, model: m })) });
+      setStatus({ ok: true, msg: t('test_ok', { model: r.model, name: r.name || t('test_food'), kcal: r.calories }) });
+    } catch (e) { setStatus({ ok: false, msg: e.message || t('test_fail') }); }
+    finally { setTesting(false); }
+  }
+  return (
+    <div className={`card w-full max-w-xl space-y-6 ${compact ? 'p-5' : 'p-8'}`}>
+      <div>
+        <label className="font-medium flex items-center gap-2.5" htmlFor="k"><span className="w-8 h-8 rounded-xl grid place-items-center bg-amber-100 text-amber-600"><Icon n="key" s={16} /></span>{t('set_key')}</label>
+        <input id="k" type="password" autoComplete="off" value={settings.key} onChange={set('key')} className="field mt-2" placeholder={t('set_key_ph')} />
+        <p className="text-sm text-ink/50 mt-2">{t('help_a')}<a className="text-cobalt underline underline-offset-4" href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">aistudio.google.com/apikey</a>{t('help_b')}</p>
+      </div>
+      <div>
+        <label className="font-medium flex items-center gap-2.5" htmlFor="m"><span className="w-8 h-8 rounded-xl grid place-items-center bg-sky-100 text-sky-600"><Icon n="zap" s={16} /></span>{t('set_model')}</label>
+        <input id="m" value={settings.model} onChange={set('model')} className="field mt-2" />
+        <p className="text-sm text-ink/50 mt-2">{t('set_model_help')}</p>
+      </div>
+      <div>
+        <label className="font-medium flex items-center gap-2.5" htmlFor="g"><span className="w-8 h-8 rounded-xl grid place-items-center bg-rose-100 text-rose-600"><Icon n="target" s={16} /></span>{t('set_goal')}</label>
+        <input id="g" type="number" min="0" value={settings.goal} onChange={set('goal')} className="field mt-2 !w-40" />
+      </div>
+      <div>
+        <button onClick={test} disabled={testing} className="btn h-11 px-6 flex items-center gap-2">
+          {testing && <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />}{testing ? t('testing') : t('test_btn')}
+        </button>
+        {status && <p role="status" className={`rise mt-3 text-sm rounded-xl px-3 py-2 ${status.ok === null ? 'bg-fog text-ink/70' : status.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{status.msg}</p>}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- app ---------- */
+const TAB_TINT = { nutrition: 'bg-amber-100 text-amber-600', workouts: 'bg-emerald-100 text-emerald-600', settings: 'bg-sky-100 text-sky-600' };
+
+function LangMenu({ value, onChange }) {
+  const [open, setOpen] = useState(false), box = useRef();
+  const cur = LANGS.find(l => l[0] === value) || LANGS[1];
+  useEffect(() => {
+    if (!open) return;
+    const away = e => { if (box.current && !box.current.contains(e.target)) setOpen(false); };
+    const esc = e => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', away); document.addEventListener('touchstart', away); document.addEventListener('keydown', esc);
+    const f = requestAnimationFrame(() => { const b = box.current && box.current.querySelector('[aria-selected="true"] button'); if (b) b.focus(); });
+    return () => { cancelAnimationFrame(f); document.removeEventListener('mousedown', away); document.removeEventListener('touchstart', away); document.removeEventListener('keydown', esc); };
+  }, [open]);
+  const pick = k => { onChange(k); setOpen(false); };
+  const arrows = e => {
+    const b = [...e.currentTarget.querySelectorAll('button')], i = b.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') { e.preventDefault(); b[(i + 1) % b.length].focus(); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); b[(i - 1 + b.length) % b.length].focus(); }
+  };
+  return (
+    <div ref={box} className="relative">
+      <button type="button" aria-haspopup="listbox" aria-expanded={open} aria-label={`${t('lang_label')}: ${cur[1]}`} onClick={() => setOpen(o => !o)}
+        className={`h-11 pl-1.5 pr-3.5 flex items-center gap-2.5 rounded-full bg-white/85 backdrop-blur border transition-all duration-300 ${open ? 'border-cobalt/40 shadow-[0_14px_30px_-12px_rgba(91,77,245,.55)]' : 'border-white shadow-[0_8px_22px_-12px_rgba(79,70,229,.45)] hover:shadow-[0_12px_28px_-12px_rgba(79,70,229,.6)] hover:-translate-y-px'}`}>
+        <span className="w-8 h-8 rounded-full grid place-items-center text-[11px] font-bold tracking-wide text-white bg-gradient-to-br from-cobalt via-violet-500 to-fuchsia-500">{cur[0].toUpperCase()}</span>
+        <span className="text-sm font-semibold">{cur[1]}</span>
+        <span className={`text-ink/50 transition-transform duration-300 ${open ? 'rotate-180' : ''}`}><Icon n="chevron" s={16} /></span>
+      </button>
+      <ul role="listbox" aria-label={t('lang_label')} onKeyDown={arrows}
+        className={`absolute right-0 top-full mt-2 w-56 p-1.5 rounded-2xl bg-white/95 backdrop-blur-xl border border-white shadow-[0_28px_60px_-20px_rgba(79,70,229,.5)] origin-top-right transition-[opacity,transform,visibility] duration-200 ease-out ${open ? 'opacity-100 scale-100 translate-y-0 visible' : 'opacity-0 scale-95 -translate-y-1 invisible pointer-events-none'}`}>
+        <li role="presentation" className="px-2.5 pt-1.5 pb-1 text-xs font-medium text-ink/45 flex items-center gap-1.5"><Icon n="globe" s={13} />{t('lang_label')}</li>
+        {LANGS.map(([k, l]) => (
+          <li key={k} role="option" aria-selected={k === value}>
+            <button type="button" tabIndex={open ? 0 : -1} onClick={() => pick(k)}
+              className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-sm text-left transition-colors duration-200 ${k === value ? 'bg-gradient-to-r from-indigo-50 to-fuchsia-50 font-semibold' : 'hover:bg-slate-100/80'}`}>
+              <span className={`w-8 h-8 rounded-full grid place-items-center text-[11px] font-bold tracking-wide shrink-0 ${k === value ? 'text-white bg-gradient-to-br from-cobalt via-violet-500 to-fuchsia-500' : 'text-ink/60 bg-slate-100'}`}>{k.toUpperCase()}</span>
+              <span className="flex-1">{l}</span>
+              {k === value && <span className="text-cobalt"><Icon n="check" s={18} /></span>}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+class Boundary extends React.Component {
+  constructor(p) { super(p); this.state = { err: null, copied: false }; this.copy = this.copy.bind(this); }
+  static getDerivedStateFromError(err) { return { err }; }
+  componentDidCatch(err, info) {
+    log('error', `the ${this.props.tab} tab crashed`, { message: String((err && err.message) || err), stack: String((err && err.stack) || '').split('\n').slice(0, 4), where: String((info && info.componentStack) || '').split('\n').slice(0, 4) });
+  }
+  copy() {
+    const text = JSON.stringify(DIAG, null, 2);
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => this.setState({ copied: true }), () => window.prompt('Copy:', text));
+  }
+  render() {
+    const { err, copied } = this.state;
+    if (!err) return this.props.children;
+    return (
+      <div role="alert" className="card p-6 max-w-xl">
+        <h2 className="font-display text-3xl">{t('crash_title')}</h2>
+        <p className="mt-2 text-ink/60 text-sm">{t('crash_body')}</p>
+        <p className="mt-3 text-sm rounded-xl bg-red-50 text-red-700 px-3 py-2 font-mono">{String(err.message || err)}</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button onClick={() => this.setState({ err: null })} className="btn h-10 px-5 text-sm">{t('crash_retry')}</button>
+          {this.props.onReset && <button onClick={() => { this.props.onReset(); this.setState({ err: null }); }} className="h-10 px-5 rounded-full bg-fog text-sm font-medium">{t('crash_reset')}</button>}
+          <button onClick={this.copy} className="h-10 px-5 rounded-full bg-fog text-sm font-medium">{copied ? t('crash_copied') : t('crash_copy')}</button>
+        </div>
+      </div>
+    );
+  }
+}
+
+const MODES = ['auto', 'mobile', 'pc'];
+
+function Segmented({ value, onChange, options, label, className = '' }) {
+  const n = options.length, i = Math.max(0, options.findIndex(o => o[0] === value));
+  return (
+    <div role="radiogroup" aria-label={label} className={`relative grid p-1 rounded-full bg-white shadow-[0_1px_0_rgba(15,20,25,.04),0_10px_30px_-18px_rgba(15,20,25,.25)] ${className}`} style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
+      <div className="absolute top-1 bottom-1 left-1 rounded-full bg-gradient-to-r from-cobalt to-violet-500 shadow-[0_6px_16px_-6px_rgba(91,77,245,.8)]" style={{ width: `calc((100% - 8px) / ${n})`, transform: `translateX(${i * 100}%)`, transition: 'transform .45s cubic-bezier(.22,1,.36,1)' }} />
+      {options.map(([k, l]) => (
+        <button key={k} role="radio" aria-checked={value === k} onClick={() => onChange(k)}
+          className={`relative z-10 h-8 px-1 truncate text-[13px] font-medium transition-colors duration-300 ${value === k ? 'text-white' : 'text-ink/60 hover:text-ink'}`}>{l}</button>
+      ))}
+    </div>
+  );
+}
+
+function App() {
+  const [tab, setTab] = useState('nutrition');
+  const [rawMode, setMode] = useStore('tally.view', 'auto');
+  const [rawLang, setLang] = useStore('tally.lang', guessLang());
+  const lang = LANGS.some(l => l[0] === rawLang) ? rawLang : 'en';
+  LANG = lang;   // read by t() in every component during this render
+  const [settings, setSettings] = useStore('tally.settings', { key: '', model: 'gemini-3.8-flash', goal: 2200 });
+  const [meals, setMeals] = useStore('tally.meals', [], (v, d) => Array.isArray(v) ? v : d);
+  const [workout, setWorkout] = useStore('tally.workout', DEFAULT_WORKOUT, sanitizeWorkout);
+  const mode = MODES.includes(rawMode) ? rawMode : 'auto';
+  const narrow = useMedia('(max-width: 820px)'), wide = useMedia('(min-width: 1100px)');
+  const compact = mode === 'mobile' || (mode === 'auto' && narrow);
+  const scroller = useRef();
+  const tabs = [['nutrition', t('nav_nutrition')], ['workouts', t('nav_workouts')], ['settings', t('nav_settings')]];
+  const idx = tabs.findIndex(x => x[0] === tab);
+
+  // PC view on a phone: ask the browser for a wide layout viewport instead of letting it scroll sideways.
+  useEffect(() => {
+    const m = document.getElementById('vp');
+    if (m) m.content = mode === 'pc' ? 'width=1200, viewport-fit=cover' : 'width=device-width, initial-scale=1, viewport-fit=cover';
+  }, [mode]);
+  useEffect(() => { document.documentElement.lang = lang; }, [lang]);
+  useEffect(() => { scroller.current && scroller.current.scrollTo(0, 0); }, [tab, compact]);
+
+  const header = (
+    <header className={`relative z-30 flex gap-4 ${compact ? 'flex-col-reverse mb-5' : 'items-start justify-between mb-8'}`}>
+      <div className="min-w-0">
+        <h1 className={`font-display leading-[1.08] pb-1 bg-gradient-to-r from-ink via-cobalt to-fuchsia-600 bg-clip-text text-transparent ${compact ? 'text-5xl' : 'text-6xl'}`}>{tabs[idx][1]}</h1>
+        <p className="text-ink/55 mt-1 font-medium">{new Date().toLocaleDateString(LOCALE(), { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+      </div>
+      <div className={`shrink-0 ${compact ? 'self-end' : 'self-start'}`}><LangMenu value={lang} onChange={setLang} /></div>
+    </header>
+  );
+  const resetWorkout = () => { log('warn', 'workout list reset by user'); setWorkout(DEFAULT_WORKOUT.map(x => ({ ...x, id: uid() }))); };
+  const view = (
+    <Boundary key={tab} tab={tab} onReset={tab === 'workouts' ? resetWorkout : null}>
+      <div className="fade min-w-0">
+        {tab === 'nutrition' && <Nutrition meals={meals} setMeals={setMeals} settings={settings} goSettings={() => setTab('settings')} setModel={m => setSettings(x => ({ ...x, model: m }))} compact={compact} two={!compact && wide} />}
+        {tab === 'workouts' && <Workouts items={workout} setItems={setWorkout} compact={compact} />}
+        {tab === 'settings' && <Settings settings={settings} setSettings={setSettings} compact={compact} />}
+      </div>
+    </Boundary>
+  );
+
+  return (
+    <div className="h-full flex flex-col overflow-hidden">
+      <div className={`shrink-0 h-14 flex items-center px-4 ${compact ? 'justify-center' : 'justify-end pr-10'}`}>
+        <Segmented value={mode} onChange={setMode} options={MODES.map(k => [k, t('view_' + k)])} label={t('view_label')} className="w-full max-w-[330px]" />
+      </div>
+      {compact ? (
+        <div className="flex-1 min-h-0 flex justify-center min-[520px]:px-4 min-[520px]:pb-4">
+          <div className="relative w-full max-w-[430px] h-full flex flex-col bg-[#F3F2FF]/85 overflow-hidden min-[520px]:rounded-[40px] min-[520px]:border-[8px] min-[520px]:border-ink min-[520px]:shadow-[0_40px_80px_-30px_rgba(15,20,25,.45)]">
+            <main ref={scroller} className="scroll flex-1 min-h-0 px-4 pt-5 pb-6">{header}{view}</main>
+            <nav className="relative shrink-0 grid grid-cols-3 bg-white/85 backdrop-blur-xl border-t border-white pb-[env(safe-area-inset-bottom)]">
+              <div className="absolute top-0 left-0 w-1/3 flex justify-center" style={{ transform: `translateX(${idx * 100}%)`, transition: 'transform .45s cubic-bezier(.22,1,.36,1)' }}><div className="w-9 h-[3px] rounded-b-full bg-gradient-to-r from-cobalt to-fuchsia-500" /></div>
+              {tabs.map(([k, l]) => (
+                <button key={k} onClick={() => setTab(k)} className={`min-w-0 py-2.5 flex flex-col items-center gap-1 text-xs font-medium transition-colors duration-300 ${tab === k ? 'text-cobalt' : 'text-ink/50'}`}><Icon n={k} />{l}</button>
+              ))}
+            </nav>
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 min-h-0 flex">
+          <aside className="w-64 shrink-0 pl-4 pb-4">
+            <div className="card h-full p-4 flex flex-col">
+              <div className="flex items-center gap-3 px-2 pt-1 mb-8">
+                <span className="w-10 h-10 rounded-2xl grid place-items-center text-white bg-gradient-to-br from-cobalt via-violet-500 to-fuchsia-500 shadow-[0_10px_22px_-8px_rgba(91,77,245,.8)]"><Icon n="logo" s={22} /></span>
+                <span className="font-display text-4xl leading-none">Tally</span>
+              </div>
+              <nav className="relative flex flex-col gap-1">
+                <div className="absolute inset-x-0 top-0 h-12 rounded-2xl bg-gradient-to-r from-cobalt to-violet-500 shadow-[0_12px_24px_-10px_rgba(91,77,245,.75)]" style={{ transform: `translateY(${idx * 52}px)`, transition: 'transform .5s cubic-bezier(.22,1,.36,1)' }} />
+                {tabs.map(([k, l]) => (
+                  <button key={k} onClick={() => setTab(k)} className={`relative z-10 h-12 pl-2 pr-4 flex items-center gap-3 rounded-2xl text-[15px] font-medium transition-colors duration-300 ${tab === k ? 'text-white' : 'text-ink/65 hover:text-ink'}`}>
+                    <span className={`w-8 h-8 rounded-xl grid place-items-center transition-colors duration-300 ${tab === k ? 'bg-white/20 text-white' : TAB_TINT[k]}`}><Icon n={k} s={18} /></span>{l}
+                  </button>
+                ))}
+              </nav>
+              <div className={`mt-auto rounded-2xl px-3 py-2.5 text-sm font-medium flex items-center gap-2 ${settings.key ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-ink/55'}`}>
+                <span className={`w-2 h-2 rounded-full ${settings.key ? 'bg-emerald-500 animate-pulse' : 'bg-ink/25'}`} />{settings.key ? t('gemini_on') : t('gemini_off')}
+              </div>
+            </div>
+          </aside>
+          <main ref={scroller} className="scroll flex-1 min-w-0 px-10 pt-2 pb-10"><div className="max-w-[1200px]">{header}{view}</div></main>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
